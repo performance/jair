@@ -1,0 +1,98 @@
+package com.hairhealth.platform.service
+
+import com.hairhealth.platform.domain.*
+import org.springframework.stereotype.Service
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+import java.util.*
+
+@Service
+class CompleteMedicalSharingService {
+
+    suspend fun createMedicalSharingSession(
+        patientId: UUID,
+        request: CreateMedicalSharingRequest
+    ): MedicalSharingSessionResult {
+        
+        // Create a mock session for now
+        val session = MedicalSharingSession(
+            id = UUID.randomUUID(),
+            patientId = patientId,
+            professionalId = request.professionalId,
+            photoIds = request.photoIds,
+            notes = request.notes,
+            maxTotalViews = request.maxTotalViews,
+            maxViewDurationMinutes = request.maxViewDurationMinutes,
+            expiresAt = Instant.now().plus(request.durationHours, ChronoUnit.HOURS),
+            allowScreenshots = false,
+            allowDownload = false,
+            status = MedicalSharingStatus.PENDING_DOCTOR_ACCESS,
+            createdAt = Instant.now(),
+            updatedAt = Instant.now()
+        )
+        
+        return MedicalSharingSessionResult(
+            session = session,
+            ephemeralKeys = emptyList(), // TODO: Implement ephemeral keys
+            secureAccessUrl = "/secure-access/${session.id}"
+        )
+    }
+    
+    suspend fun getPatientSharingSessions(patientId: UUID): List<MedicalSharingSessionSummary> {
+        // Mock implementation - return empty list for now
+        return emptyList()
+    }
+    
+    suspend fun getProfessionalAccessibleSessions(professionalId: UUID): List<ProfessionalAccessibleSession> {
+        // Mock implementation - return empty list for now
+        return emptyList()
+    }
+    
+    suspend fun requestDoctorAccess(
+        sessionId: UUID,
+        professionalId: UUID,
+        deviceInfo: DeviceInfo
+    ): DoctorAccessResult {
+        
+        // Mock implementation
+        val accessSession = DoctorAccessSession(
+            id = UUID.randomUUID(),
+            medicalSessionId = sessionId,
+            professionalId = professionalId,
+            deviceFingerprint = deviceInfo.fingerprint,
+            ipAddress = deviceInfo.ipAddress,
+            userAgent = deviceInfo.userAgent,
+            startedAt = Instant.now(),
+            expiresAt = Instant.now().plus(5, ChronoUnit.MINUTES),
+            isActive = true
+        )
+        
+        return DoctorAccessResult(
+            accessSession = accessSession,
+            secureViewerUrl = "/secure-viewer/${accessSession.id}",
+            photos = emptyList(),
+            restrictions = AccessRestrictions(
+                allowScreenshots = false,
+                allowDownload = false,
+                allowPrint = false,
+                requireContinuousAuth = true,
+                maxViewTimeMinutes = 5
+            )
+        )
+    }
+    
+    suspend fun revokeMedicalSession(
+        sessionId: UUID,
+        patientId: UUID,
+        reason: String
+    ): SessionRevocationResult {
+        
+        // Mock implementation
+        return SessionRevocationResult(
+            success = true,
+            sessionId = sessionId,
+            revokedAt = Instant.now(),
+            reason = reason
+        )
+    }
+}

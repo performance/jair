@@ -1,0 +1,140 @@
+package com.hairhealth.platform.service
+
+import com.hairhealth.platform.domain.MedicalSharingSession
+import com.hairhealth.platform.domain.MedicalSharingStatus
+import com.hairhealth.platform.domain.DoctorAccessSession
+import com.hairhealth.platform.domain.PhotoAngle
+import com.hairhealth.platform.repository.PhotoMetadataRepository
+import com.hairhealth.platform.security.UserPrincipal
+import org.springframework.stereotype.Service
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+import java.util.*
+
+@Service
+class MedicalSharingService(
+    private val photoMetadataRepository: PhotoMetadataRepository
+) {
+
+    suspend fun createMedicalSharingSession(
+        patientId: UUID,
+        request: CreateMedicalSharingRequest
+    ): MedicalSharingSession {
+        
+        // Validate that patient owns all requested photos
+        val photos = request.photoIds.map { photoId ->
+            photoMetadataRepository.findById(photoId)
+                ?: throw IllegalArgumentException("Photo $photoId not found")
+        }
+        
+        photos.forEach { photo ->
+            if (photo.userId != patientId) {
+                throw IllegalArgumentException("Unauthorized access to photo ${photo.id}")
+            }
+        }
+        
+        val sessionId = UUID.randomUUID()
+        val expiresAt = Instant.now().plus(request.durationHours, ChronoUnit.HOURS)
+        
+        // Generate secure viewing tokens for each photo
+        val photoTokens = photos.associate { photo ->
+            photo.id to generateSecurePhotoToken(sessionId, photo.id, request.professionalId)
+        }
+        
+        val session = MedicalSharingSession(
+            sessionId = sessionId,
+            patientId = patientId,
+            professionalId = request.professionalId,
+            photoIds = request.photoIds,
+            notes = request.notes,
+            restrictions = ViewingRestrictions(
+                maxTotalViews = request.maxTotalViews,
+                maxViewDurationMinutes = request.maxViewDurationMinutes,
+                expiresAt = expiresAt,
+                allowScreenshots = false,
+                allowDownload = false
+            ),
+            photoTokens = photoTokens,
+            createdAt = Instant.now(),
+            status = MedicalSharingStatus.PENDING_DOCTOR_ACCESS
+        )
+        
+        // Store session (in real implementation, this would go to database)
+        storeMedicalSession(session)
+        
+        // Send secure notification to doctor
+        notifyProfessional(session)
+        
+        return session
+    }
+    
+    suspend fun requestDoctorAccess(
+        sessionId: UUID,
+        professionalId: UUID,
+        deviceFingerprint: String
+    ): DoctorAccessSession {
+        
+        val session = getMedicalSession(sessionId)
+            ?: throw IllegalArgumentException("Sharing session not found")
+        
+        if (session.professionalId != professionalId) {
+            throw IllegalArgumentException("Unauthorized access to medical session")
+        }
+        
+        if (session.restrictions.expiresAt.isBefore(Instant.now())) {
+            throw IllegalArgumentException("Sharing session has expired")
+        }
+        
+        if (session.viewingHistory.size >= session.restrictions.maxTotalViews) {
+            throw IllegalArgumentException("Maximum viewing attempts exceeded")
+        }
+        
+        // Generate ephemeral decryption session
+        val accessSession = DoctorAccessSession(
+            accessSessionId = UUID.randomUUID(),
+            medicalSessionId = sessionId,
+            professionalId = professionalId,
+            deviceFingerprint = deviceFingerprint,
+            maxDurationMinutes = session.restrictions.maxViewDurationMinutes,
+            expiresAt = Instant.now().plus(session.restrictions.maxViewDurationMinutes.toLong(), ChronoUnit.MINUTES),
+            createdAt = Instant.now()
+        )
+        
+        // Update session with new access attempt
+        updateSessionAccess(sessionId, accessSession)
+        
+        // Notify patient of doctor's access
+        notifyPatientOfAccess(session.patientId, professionalId, Instant.now())
+        
+        return accessSession
+    }
+    
+    private fun generateSecurePhotoToken(sessionId: UUID, photoId: UUID, professionalId: UUID): String {
+        // Generate a unique token that allows decryption of this specific photo
+        // In real implementation, this would be cryptographically secure
+        return "${sessionId}_${photoId}_${professionalId}_${System.currentTimeMillis()}"
+    }
+    
+    private fun storeMedicalSession(session: MedicalSharingSession) {
+        // Store in secure database with encryption
+        // Implementation would use repository pattern
+    }
+    
+    private fun getMedicalSession(sessionId: UUID): MedicalSharingSession? {
+        // Retrieve from database
+        return null // Placeholder
+    }
+    
+    private fun updateSessionAccess(sessionId: UUID, accessSession: DoctorAccessSession) {
+        // Update database with new access session
+    }
+    
+    private suspend fun notifyProfessional(session: MedicalSharingSession) {
+        // Send secure notification to professional
+        // Could be email, SMS, or in-app notification
+    }
+    
+    private suspend fun notifyPatientOfAccess(patientId: UUID, professionalId: UUID, accessTime: Instant) {
+        // Real-time notification to patient when doctor accesses photos
+    }
+}
