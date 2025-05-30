@@ -1,0 +1,3 @@
+-- We'll start with this basic file, we'll populate it in the next step
+-- Initial schema for Hair Health Platform
+-- This will be our first Flyway migration
