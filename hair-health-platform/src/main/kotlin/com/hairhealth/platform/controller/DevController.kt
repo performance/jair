@@ -2,6 +2,7 @@ package com.hairhealth.platform.controller
 
 import com.hairhealth.platform.domain.*
 import com.hairhealth.platform.service.HairFallLogService
+import com.hairhealth.platform.service.InterventionService
 import com.hairhealth.platform.service.UserService
 import org.springframework.web.bind.annotation.*
 import java.time.Instant
@@ -12,7 +13,8 @@ import java.util.*
 @RequestMapping("/api/v1/dev")
 class DevController(
     private val userService: UserService,
-    private val hairFallLogService: HairFallLogService
+    private val hairFallLogService: HairFallLogService,
+    private val interventionService: InterventionService
 ) {
 
     @PostMapping("/setup-test-user")
@@ -76,4 +78,89 @@ class DevController(
             "sampleLogs" to sampleLogs
         )
     }
+
+    @PostMapping("/setup-intervention-data")
+    suspend fun setupInterventionData(@RequestParam userId: String): Map<String, Any> {
+    val userUuid = UUID.fromString(userId)
+    
+    // Create sample interventions
+    val minoxidil = interventionService.createIntervention(
+        userId = userUuid,
+        type = InterventionType.TOPICAL,
+        productName = "Minoxidil 5%",
+        dosageAmount = "1ml",
+        frequency = "Twice Daily",
+        applicationTime = "08:00, 20:00",
+        startDate = LocalDate.now().minusDays(30),
+        endDate = null,
+        provider = null,
+        notes = "Apply to dry scalp, massage gently",
+        sourceRecommendationId = null
+    )
+    
+    val finasteride = interventionService.createIntervention(
+        userId = userUuid,
+        type = InterventionType.ORAL,
+        productName = "Finasteride 1mg",
+        dosageAmount = "1mg",
+        frequency = "Once Daily",
+        applicationTime = "08:00",
+        startDate = LocalDate.now().minusDays(60),
+        endDate = null,
+        provider = "Dr. Smith",
+        notes = "Take with breakfast",
+        sourceRecommendationId = null
+    )
+    
+    // Create sample applications for the last week
+    val sampleApplications = mutableListOf<Map<String, Any>>()
+    for (i in 1..7) {
+        // Minoxidil applications (twice daily)
+        val morningApp = interventionService.logApplication(
+            interventionId = minoxidil.id,
+            userId = userUuid,
+            timestamp = LocalDate.now().minusDays(i.toLong()).atTime(8, 0).atZone(java.time.ZoneId.systemDefault()).toInstant(),
+            notes = if (i == 1) "Forgot evening dose" else null
+        )
+        
+        if (i != 1) { // Skip one evening application to simulate missed dose
+            val eveningApp = interventionService.logApplication(
+                interventionId = minoxidil.id,
+                userId = userUuid,
+                timestamp = LocalDate.now().minusDays(i.toLong()).atTime(20, 0).atZone(java.time.ZoneId.systemDefault()).toInstant(),
+                notes = null
+            )
+            sampleApplications.add(mapOf("type" to "evening", "date" to LocalDate.now().minusDays(i.toLong())))
+       }
+       
+       sampleApplications.add(mapOf("type" to "morning", "date" to LocalDate.now().minusDays(i.toLong())))
+       
+       // Finasteride applications (once daily)
+       val finasterideApp = interventionService.logApplication(
+           interventionId = finasteride.id,
+           userId = userUuid,
+           timestamp = LocalDate.now().minusDays(i.toLong()).atTime(8, 30).atZone(java.time.ZoneId.systemDefault()).toInstant(),
+           notes = null
+       )
+    }
+   
+    return mapOf(
+        "interventions" to listOf(
+            mapOf(
+                "id" to minoxidil.id,
+                "productName" to minoxidil.productName,
+                "type" to minoxidil.type,
+                "frequency" to minoxidil.frequency
+            ),
+            mapOf(
+                "id" to finasteride.id,
+                "productName" to finasteride.productName,
+                "type" to finasteride.type,
+                "frequency" to finasteride.frequency
+            )
+        ),
+        "applicationsCreated" to sampleApplications.size,
+        "note" to "Sample intervention data created for testing"
+    )
+  }
 }
