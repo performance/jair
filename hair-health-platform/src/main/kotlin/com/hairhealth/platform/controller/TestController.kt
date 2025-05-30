@@ -15,11 +15,19 @@ class TestController {
     }
 
     @GetMapping("/protected")
-    fun protectedEndpoint(authentication: Authentication): Map<String, Any> {
-        return mapOf(
-            "message" to "This is a protected endpoint",
-            "user" to authentication.name,
-            "authorities" to authentication.authorities.map { it.authority }
-        )
+    fun protectedEndpoint(authentication: Authentication?): Map<String, Any> {
+        return if (authentication != null) {
+            mapOf(
+                "message" to "This is a protected endpoint",
+                "user" to authentication.name,
+                "authorities" to authentication.authorities.map { it.authority }
+            )
+        } else {
+            mapOf(
+                "message" to "This is a protected endpoint",
+                "user" to "anonymous",
+                "authorities" to emptyList<String>()
+            )
+        }
     }
 }

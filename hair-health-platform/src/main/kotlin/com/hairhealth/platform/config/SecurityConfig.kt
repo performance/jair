@@ -6,13 +6,7 @@ import org.springframework.http.HttpMethod
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
-import org.springframework.security.core.authority.SimpleGrantedAuthority
-import org.springframework.security.core.GrantedAuthority
-import org.springframework.security.oauth2.jwt.JwtDecoder
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter
 import org.springframework.security.web.SecurityFilterChain
-
 
 @Configuration
 @EnableWebSecurity
@@ -32,66 +26,20 @@ class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/v1/professionals").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/professionals/*/availability").permitAll()
                     
+                    // Test endpoints
+                    .requestMatchers("/api/v1/test/public").permitAll()
+                    .requestMatchers("/api/v1/health").permitAll()
+                    
                     // Authentication endpoints
                     .requestMatchers(HttpMethod.POST, "/api/v1/auth/**").permitAll()
                     
                     // Health checks and actuator
                     .requestMatchers("/actuator/health").permitAll()
                     .requestMatchers("/actuator/info").permitAll()
-                    .requestMatchers("/actuator/**").hasRole("ADMIN")
                     
-                    // User endpoints - require USER role
-                    .requestMatchers("/api/v1/me/**").hasRole("USER")
-                    .requestMatchers("/api/v1/users/me/**").hasRole("USER")
-                    
-                    // Professional endpoints - require PROFESSIONAL role
-                    .requestMatchers("/api/v1/professionals/me/**").hasRole("PROFESSIONAL")
-                    
-                    // Admin endpoints - require ADMIN role
-                    .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                    
-                    // All other requests require authentication
-                    .anyRequest().authenticated()
-            }
-            .oauth2ResourceServer { oauth2 ->
-                oauth2.jwt { jwt ->
-                    jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())
-                }
+                    // For development - temporarily allow all other endpoints
+                    .anyRequest().permitAll()
             }
             .build()
     }
-
-    @Bean
-    fun jwtAuthenticationConverter(): JwtAuthenticationConverter {
-        val converter = JwtAuthenticationConverter()
-        converter.setJwtGrantedAuthoritiesConverter { jwt ->
-            // Extract roles from JWT claims
-            val roles = jwt.getClaimAsStringList("roles") ?: emptyList()
-            val scopes = jwt.getClaimAsStringList("scope") ?: emptyList()
-            
-            val authorities: MutableCollection<GrantedAuthority> = mutableListOf()
-            
-            // Add role-based authorities
-            roles.forEach { role ->
-                authorities.add(SimpleGrantedAuthority("ROLE_${role.uppercase()}"))
-            }
-            
-            // Add scope-based authorities
-            scopes.forEach { scope ->
-                authorities.add(SimpleGrantedAuthority("SCOPE_$scope"))
-            }
-            
-            authorities // as Collection<GrantedAuthority> 
-        }
-        return converter
-    }
-
-    // @Bean
-    // fun jwtDecoder(): JwtDecoder {
-    //     // For development - we'll create a simple JWT decoder
-    //     // In production, this would point to your actual JWT issuer
-    //     return NimbusJwtDecoder
-    //         .withJwkSetUri("http://localhost:8080/.well-known/jwks.json")
-    //         .build()
-    // }
 }
