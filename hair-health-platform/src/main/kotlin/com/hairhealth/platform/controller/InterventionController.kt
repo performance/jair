@@ -1,9 +1,11 @@
 package com.hairhealth.platform.controller
 
 import com.hairhealth.platform.domain.InterventionType
+import com.hairhealth.platform.security.UserPrincipal
 import com.hairhealth.platform.service.AdherenceStats
 import com.hairhealth.platform.service.InterventionService
 import org.springframework.format.annotation.DateTimeFormat
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
 import java.time.Instant
 import java.time.LocalDate
@@ -16,9 +18,12 @@ class InterventionController(
 ) {
 
     @PostMapping
-    suspend fun createIntervention(@RequestBody request: CreateInterventionRequest): InterventionResponse {
+    suspend fun createIntervention(
+        @AuthenticationPrincipal userPrincipal: UserPrincipal,
+        @RequestBody request: CreateInterventionRequest
+    ): InterventionResponse {
         val intervention = interventionService.createIntervention(
-            userId = request.userId, // TODO: Extract from JWT
+            userId = userPrincipal.userId,
             type = request.type,
             productName = request.productName,
             dosageAmount = request.dosageAmount,
@@ -36,11 +41,11 @@ class InterventionController(
 
     @GetMapping
     suspend fun getInterventions(
-        @RequestParam(defaultValue = "dummy-user-id") userId: String, // TODO: Extract from JWT
+        @AuthenticationPrincipal userPrincipal: UserPrincipal,
         @RequestParam(defaultValue = "false") includeInactive: Boolean
     ): List<InterventionResponse> {
         val interventions = interventionService.getInterventionsByUserId(
-            UUID.fromString(userId),
+            userPrincipal.userId,
             includeInactive
         )
         return interventions.map { it.toResponse() }
@@ -48,9 +53,9 @@ class InterventionController(
 
     @GetMapping("/active")
     suspend fun getActiveInterventions(
-        @RequestParam(defaultValue = "dummy-user-id") userId: String // TODO: Extract from JWT
+        @AuthenticationPrincipal userPrincipal: UserPrincipal
     ): List<InterventionResponse> {
-        val interventions = interventionService.getActiveInterventionsByUserId(UUID.fromString(userId))
+        val interventions = interventionService.getActiveInterventionsByUserId(userPrincipal.userId)
         return interventions.map { it.toResponse() }
     }
 
@@ -96,12 +101,13 @@ class InterventionController(
 
     @PostMapping("/{id}/log-application")
     suspend fun logApplication(
+        @AuthenticationPrincipal userPrincipal: UserPrincipal,
         @PathVariable id: UUID,
         @RequestBody request: LogApplicationRequest
     ): InterventionApplicationResponse {
         val application = interventionService.logApplication(
             interventionId = id,
-            userId = request.userId, // TODO: Extract from JWT
+            userId = userPrincipal.userId,
             timestamp = request.timestamp ?: Instant.now(),
             notes = request.notes
         )
@@ -141,12 +147,12 @@ class InterventionController(
 
     @GetMapping("/applications/date-range")
     suspend fun getApplicationsByDateRange(
-        @RequestParam(defaultValue = "dummy-user-id") userId: String, // TODO: Extract from JWT
+        @AuthenticationPrincipal userPrincipal: UserPrincipal,
         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) startDate: LocalDate,
         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) endDate: LocalDate
     ): List<InterventionApplicationResponse> {
         val applications = interventionService.getApplicationsByUserIdAndDateRange(
-            UUID.fromString(userId),
+            userPrincipal.userId,
             startDate,
             endDate
         )
@@ -156,7 +162,6 @@ class InterventionController(
 
 // Request/Response DTOs
 data class CreateInterventionRequest(
-    val userId: UUID, // TODO: Remove when extracting from JWT
     val type: InterventionType,
     val productName: String,
     val dosageAmount: String?,
@@ -182,7 +187,6 @@ data class UpdateInterventionRequest(
 )
 
 data class LogApplicationRequest(
-    val userId: UUID, // TODO: Remove when extracting from JWT
     val timestamp: Instant?,
     val notes: String?
 )

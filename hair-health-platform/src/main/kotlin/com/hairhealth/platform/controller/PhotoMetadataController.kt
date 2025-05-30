@@ -1,11 +1,10 @@
 package com.hairhealth.platform.controller
 
 import com.hairhealth.platform.domain.PhotoAngle
+import com.hairhealth.platform.security.UserPrincipal
 import com.hairhealth.platform.service.PhotoMetadataService
-import com.hairhealth.platform.service.PhotoStats
-import com.hairhealth.platform.service.PhotoUploadSession
-import com.hairhealth.platform.service.PhotoViewSession
 import org.springframework.format.annotation.DateTimeFormat
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
 import java.time.Instant
 import java.util.*
@@ -17,9 +16,12 @@ class PhotoMetadataController(
 ) {
 
     @PostMapping("/upload-url")
-    suspend fun requestUploadUrl(@RequestBody request: PhotoUploadRequest): PhotoUploadResponse {
+    suspend fun requestUploadUrl(
+        @AuthenticationPrincipal userPrincipal: UserPrincipal,
+        @RequestBody request: PhotoUploadRequest
+    ): PhotoUploadResponse {
         val uploadSession = photoMetadataService.createPhotoMetadata(
-            userId = request.userId, // TODO: Extract from JWT
+            userId = userPrincipal.userId,
             filename = request.filename,
             angle = request.angle,
             captureDate = request.captureDate,
@@ -33,39 +35,24 @@ class PhotoMetadataController(
         )
     }
 
-    @PostMapping("/{photoMetadataId}/finalize")
-    suspend fun finalizePhotoUpload(
-        @PathVariable photoMetadataId: UUID,
-        @RequestBody request: FinalizeUploadRequest
-    ): PhotoMetadataResponse {
-        val photoMetadata = photoMetadataService.finalizePhotoUpload(
-            photoId = photoMetadataId,
-            fileSize = request.fileSize
-        )
-
-        return photoMetadata.toResponse()
-    }
-
     @GetMapping
     suspend fun getProgressPhotos(
-        @RequestParam(defaultValue = "dummy-user-id") userId: String, // TODO: Extract from JWT
+        @AuthenticationPrincipal userPrincipal: UserPrincipal,
         @RequestParam(required = false) angle: PhotoAngle?,
         @RequestParam(defaultValue = "50") limit: Int,
         @RequestParam(defaultValue = "0") offset: Int,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) startDate: Instant?,
         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) endDate: Instant?
     ): List<PhotoMetadataResponse> {
-        val userUuid = UUID.fromString(userId)
-        
         val photos = when {
             startDate != null && endDate != null -> {
-                photoMetadataService.getPhotosByDateRange(userUuid, startDate, endDate, angle)
+                photoMetadataService.getPhotosByDateRange(userPrincipal.userId, startDate, endDate, angle)
             }
             angle != null -> {
-                photoMetadataService.getPhotosByUserIdAndAngle(userUuid, angle)
+                photoMetadataService.getPhotosByUserIdAndAngle(userPrincipal.userId, angle)
             }
             else -> {
-                photoMetadataService.getPhotosByUserId(userUuid, limit, offset)
+                photoMetadataService.getPhotosByUserId(userPrincipal.userId, limit, offset)
             }
         }
 
@@ -104,9 +91,9 @@ class PhotoMetadataController(
 
     @GetMapping("/stats")
     suspend fun getPhotoStats(
-        @RequestParam(defaultValue = "dummy-user-id") userId: String // TODO: Extract from JWT
+        @AuthenticationPrincipal userPrincipal: UserPrincipal
     ): PhotoStatsResponse {
-        val stats = photoMetadataService.getPhotoStats(UUID.fromString(userId))
+        val stats = photoMetadataService.getPhotoStats(userPrincipal.userId)
         return PhotoStatsResponse(
             totalPhotos = stats.totalPhotos,
             photosByAngle = stats.photosByAngle,
@@ -117,35 +104,22 @@ class PhotoMetadataController(
         )
     }
 
-    @GetMapping("/comparison-set")
-    suspend fun getComparisonSet(
-        @RequestParam(defaultValue = "dummy-user-id") userId: String, // TODO: Extract from JWT
-        @RequestParam angles: List<PhotoAngle>,
-        @RequestParam(defaultValue = "6") monthsBack: Int
-    ): ComparisonSetResponse {
-        val userUuid = UUID.fromString(userId)
-        val endDate = Instant.now()
-        val startDate = endDate.minusSeconds(monthsBack * 30L * 24 * 3600) // Approximate months
-
-        val photosByAngle = angles.associateWith { angle ->
-            photoMetadataService.getPhotosByDateRange(userUuid, startDate, endDate, angle)
-                .take(10) // Limit to 10 most recent per angle
-        }
-
-        return ComparisonSetResponse(
-            angles = angles,
-            timeRange = TimeRange(startDate.toString(), endDate.toString()),
-            photosByAngle = photosByAngle.mapValues { entry ->
-                entry.value.map { it.toResponse() }
-            },
-            totalPhotos = photosByAngle.values.sumOf { it.size }
+    @PostMapping("/{photoMetadataId}/finalize")
+    suspend fun finalizePhotoUpload(
+        @PathVariable photoMetadataId: UUID,
+        @RequestBody request: FinalizeUploadRequest
+    ): PhotoMetadataResponse {
+        val photoMetadata = photoMetadataService.finalizePhotoUpload(
+            photoId = photoMetadataId,
+            fileSize = request.fileSize
         )
+
+        return photoMetadata.toResponse()
     }
 }
 
 // Request/Response DTOs
 data class PhotoUploadRequest(
-    val userId: UUID, // TODO: Remove when extracting from JWT
     val filename: String,
     val angle: PhotoAngle,
     val captureDate: Instant,
@@ -186,18 +160,6 @@ data class PhotoStatsResponse(
     val oldestPhotoDate: String?,
     val newestPhotoDate: String?,
     val totalStorageUsedBytes: Long
-)
-
-data class ComparisonSetResponse(
-    val angles: List<PhotoAngle>,
-    val timeRange: TimeRange,
-    val photosByAngle: Map<PhotoAngle, List<PhotoMetadataResponse>>,
-    val totalPhotos: Int
-)
-
-data class TimeRange(
-    val startDate: String,
-    val endDate: String
 )
 
 // Extension function

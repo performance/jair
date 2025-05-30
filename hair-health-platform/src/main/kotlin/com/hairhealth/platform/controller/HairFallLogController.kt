@@ -1,8 +1,10 @@
 package com.hairhealth.platform.controller
 
 import com.hairhealth.platform.domain.HairFallCategory
+import com.hairhealth.platform.security.UserPrincipal
 import com.hairhealth.platform.service.HairFallLogService
 import org.springframework.format.annotation.DateTimeFormat
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
 import java.time.LocalDate
 import java.util.*
@@ -14,9 +16,12 @@ class HairFallLogController(
 ) {
 
     @PostMapping
-    suspend fun createHairFallLog(@RequestBody request: CreateHairFallLogRequest): HairFallLogResponse {
+    suspend fun createHairFallLog(
+        @AuthenticationPrincipal userPrincipal: UserPrincipal,
+        @RequestBody request: CreateHairFallLogRequest
+    ): HairFallLogResponse {
         val hairFallLog = hairFallLogService.createHairFallLog(
-            userId = request.userId, // TODO: Extract from JWT in real implementation
+            userId = userPrincipal.userId, // Extract from JWT instead of request
             date = request.date,
             count = request.count,
             category = request.category,
@@ -29,12 +34,12 @@ class HairFallLogController(
 
     @GetMapping
     suspend fun getHairFallLogs(
-        @RequestParam(defaultValue = "dummy-user-id") userId: String, // TODO: Extract from JWT
+        @AuthenticationPrincipal userPrincipal: UserPrincipal,
         @RequestParam(defaultValue = "20") limit: Int,
         @RequestParam(defaultValue = "0") offset: Int
     ): List<HairFallLogResponse> {
         val logs = hairFallLogService.getHairFallLogsByUserId(
-            userId = UUID.fromString(userId),
+            userId = userPrincipal.userId, // Extract from JWT
             limit = limit,
             offset = offset
         )
@@ -43,12 +48,12 @@ class HairFallLogController(
 
     @GetMapping("/date-range")
     suspend fun getHairFallLogsByDateRange(
-        @RequestParam(defaultValue = "dummy-user-id") userId: String, // TODO: Extract from JWT
+        @AuthenticationPrincipal userPrincipal: UserPrincipal,
         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) startDate: LocalDate,
         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) endDate: LocalDate
     ): List<HairFallLogResponse> {
         val logs = hairFallLogService.getHairFallLogsByDateRange(
-            userId = UUID.fromString(userId),
+            userId = userPrincipal.userId, // Extract from JWT
             startDate = startDate,
             endDate = endDate
         )
@@ -89,15 +94,14 @@ class HairFallLogController(
 
     @GetMapping("/stats")
     suspend fun getHairFallStats(
-        @RequestParam(defaultValue = "dummy-user-id") userId: String // TODO: Extract from JWT
+        @AuthenticationPrincipal userPrincipal: UserPrincipal
     ): HairFallStatsResponse {
-        return hairFallLogService.getHairFallStats(UUID.fromString(userId))
+        return hairFallLogService.getHairFallStats(userPrincipal.userId) // Extract from JWT
     }
 }
 
-// Request/Response DTOs
+// Updated Request DTOs (removed userId)
 data class CreateHairFallLogRequest(
-    val userId: UUID, // TODO: Remove when we extract from JWT
     val date: LocalDate,
     val count: Int?,
     val category: HairFallCategory,
