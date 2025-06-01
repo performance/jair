@@ -27,7 +27,7 @@ class AuthService(
         val user = User(
             id = UUID.randomUUID(),
             email = email,
-            username = username,
+            username = if ( username.isNullOrEmpty() ) email else username,
             passwordHash = hashedPassword,
             isEmailVerified = false,
             createdAt = Instant.now(),

@@ -5,6 +5,12 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
+__pycache__/
+*.pyo
+*.pyc
+*.swp
+
+
 ### STS ###
 .apt_generated
 .classpath
