@@ -5,7 +5,7 @@ import java.time.LocalDate
 import java.util.UUID
 
 data class Intervention(
-    val id: UUID,
+    val id: UUID = UUID.randomUUID(),
     val userId: UUID,
     val type: InterventionType,
     val productName: String,
@@ -18,8 +18,8 @@ data class Intervention(
     val provider: String?, // Doctor name for OTHER_TREATMENT
     val notes: String?,
     val sourceRecommendationId: UUID?, // Links to professional recommendation
-    val createdAt: Instant,
-    val updatedAt: Instant
+    val createdAt: Instant = Instant.now(),
+    val updatedAt: Instant = Instant.now()
 )
 
 enum class InterventionType {
@@ -27,10 +27,10 @@ enum class InterventionType {
 }
 
 data class InterventionApplication(
-    val id: UUID,
+    val id: UUID = UUID.randomUUID(),
     val interventionId: UUID,
     val userId: UUID,
     val timestamp: Instant,
     val notes: String?,
-    val createdAt: Instant
+    val createdAt: Instant = Instant.now()
 )

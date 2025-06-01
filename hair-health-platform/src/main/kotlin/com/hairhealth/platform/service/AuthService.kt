@@ -1,5 +1,7 @@
 package com.hairhealth.platform.service
 
+import com.hairhealth.platform.domain.ActorType
+import com.hairhealth.platform.domain.AuditEventStatus
 import com.hairhealth.platform.domain.User
 import com.hairhealth.platform.repository.UserRepository
 import com.hairhealth.platform.security.JwtService
@@ -13,12 +15,23 @@ import java.util.*
 class AuthService(
     private val userRepository: UserRepository,
     private val jwtService: JwtService,
-    private val passwordEncoder: PasswordEncoder
+    private val passwordEncoder: PasswordEncoder,
+    private val auditLogService: AuditLogService // Injected AuditLogService
 ) {
 
     suspend fun register(email: String, password: String, username: String?): AuthResponse {
         // Check if user already exists
         if (userRepository.existsByEmail(email)) {
+            // Log registration failure (user already exists)
+            auditLogService.logEvent(
+                actorId = email, // Using email as identifier before user object exists
+                actorType = ActorType.USER, // Assuming USER, could be PROFESSIONAL if context allows
+                action = "USER_REGISTRATION_ATTEMPT_FAILURE",
+                targetEntityType = "USER_ACCOUNT",
+                targetEntityId = email,
+                status = AuditEventStatus.FAILURE,
+                details = mapOf("reason" to "Email already exists", "email" to email)
+            )
             throw IllegalArgumentException("User with email $email already exists")
         }
 
@@ -36,6 +49,17 @@ class AuthService(
         )
 
         val createdUser = userRepository.create(user)
+
+        // Log successful registration
+        auditLogService.logEvent(
+            actorId = createdUser.id.toString(),
+            actorType = ActorType.USER, // Assuming USER
+            action = "USER_REGISTRATION_SUCCESS",
+            targetEntityType = "USER_ACCOUNT",
+            targetEntityId = createdUser.id.toString(),
+            status = AuditEventStatus.SUCCESS,
+            details = mapOf("userId" to createdUser.id.toString(), "email" to createdUser.email)
+        )
         
         // Generate tokens
         val userPrincipal = UserPrincipal(
@@ -63,17 +87,57 @@ class AuthService(
     suspend fun login(email: String, password: String): AuthResponse {
         // Find user by email
         val user = userRepository.findByEmail(email)
-            ?: throw IllegalArgumentException("Invalid email or password")
+        if (user == null) {
+            auditLogService.logEvent(
+                actorId = email, // Use email as identifier for failed attempt
+                actorType = ActorType.USER,
+                action = "USER_LOGIN_FAILURE",
+                targetEntityType = "USER_ACCOUNT",
+                targetEntityId = email,
+                status = AuditEventStatus.FAILURE,
+                details = mapOf("reason" to "User not found", "email" to email)
+            )
+            throw IllegalArgumentException("Invalid email or password")
+        }
 
         // Verify password
         if (!passwordEncoder.matches(password, user.passwordHash)) {
+            auditLogService.logEvent(
+                actorId = user.id.toString(),
+                actorType = ActorType.USER,
+                action = "USER_LOGIN_FAILURE",
+                targetEntityType = "USER_ACCOUNT",
+                targetEntityId = user.id.toString(),
+                status = AuditEventStatus.FAILURE,
+                details = mapOf("reason" to "Invalid password", "userId" to user.id.toString(), "email" to email)
+            )
             throw IllegalArgumentException("Invalid email or password")
         }
 
         // Check if user is active
         if (!user.isActive) {
+            auditLogService.logEvent(
+                actorId = user.id.toString(),
+                actorType = ActorType.USER,
+                action = "USER_LOGIN_FAILURE",
+                targetEntityType = "USER_ACCOUNT",
+                targetEntityId = user.id.toString(),
+                status = AuditEventStatus.FAILURE,
+                details = mapOf("reason" to "User account deactivated", "userId" to user.id.toString())
+            )
             throw IllegalArgumentException("User account is deactivated")
         }
+
+        // Log successful login
+        auditLogService.logEvent(
+            actorId = user.id.toString(),
+            actorType = ActorType.USER, // Assuming USER
+            action = "USER_LOGIN_SUCCESS",
+            targetEntityType = "USER_ACCOUNT",
+            targetEntityId = user.id.toString(),
+            status = AuditEventStatus.SUCCESS,
+            details = mapOf("userId" to user.id.toString(), "email" to user.email)
+        )
 
         // Generate tokens
         val userPrincipal = UserPrincipal(

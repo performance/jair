@@ -56,6 +56,24 @@ class JdbcHairFallLogRepository(
         }
     }
 
+    override suspend fun findByIdAndUserId(id: UUID, userId: UUID): HairFallLog? = withContext(Dispatchers.IO) {
+        val sql = """
+            SELECT id, user_id, date, count, category, description, photo_metadata_id, created_at, updated_at
+            FROM hair_fall_logs
+            WHERE id = :id AND user_id = :userId
+        """.trimIndent()
+
+        val params = MapSqlParameterSource()
+            .addValue("id", id)
+            .addValue("userId", userId)
+
+        try {
+            jdbcTemplate.queryForObject(sql, params) { rs, _ -> mapRowToHairFallLog(rs) }
+        } catch (e: Exception) { // More specific: EmptyResultDataAccessException
+            null
+        }
+    }
+
     override suspend fun findByUserId(userId: UUID, limit: Int, offset: Int): List<HairFallLog> = withContext(Dispatchers.IO) {
         val sql = """
             SELECT id, user_id, date, count, category, description, photo_metadata_id, created_at, updated_at
