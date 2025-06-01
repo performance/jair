@@ -34,15 +34,18 @@ fun CreateHairFallLogRequest.toDomain(userId: UUID): HairFallLog {
     } catch (e: IllegalArgumentException) {
         throw IllegalArgumentException("Invalid hair fall category: ${this.category}. Valid categories are: ${HairFallCategory.values().joinToString { it.name }}")
     }
-    // id, createdAt, updatedAt will be set with defaults in the domain or by the DB/repository
+    // For a new entity, ID and timestamps are typically generated just before saving.
+    // This function, if used, should reflect that these would be new values.
     return HairFallLog(
+        id = UUID.randomUUID(), // Placeholder, will be overridden by service/repo if this instance is persisted
         userId = userId,
         date = this.date,
         count = this.count,
         category = logCategory,
         description = this.description,
-        photoMetadataId = this.photoMetadataId
-        // Assuming id, createdAt, updatedAt have defaults in domain or are set by repository/DB
+        photoMetadataId = this.photoMetadataId,
+        createdAt = Instant.now(), // Placeholder, will be overridden by service/repo
+        updatedAt = Instant.now()  // Placeholder, will be overridden by service/repo
     )
 }
 
@@ -59,3 +62,10 @@ fun HairFallLog.toResponse(): HairFallLogResponse {
         updatedAt = this.updatedAt
     )
 }
+
+data class HairFallStatsResponse(
+    val totalLogs: Long,
+    val averageCount: Double?, // Nullable if no logs with counts
+    val mostCommonCategory: String?, // Nullable if no logs, stores category.name
+    val recentTrend: String // e.g., "increasing", "decreasing", "stable", "insufficient_data"
+)
