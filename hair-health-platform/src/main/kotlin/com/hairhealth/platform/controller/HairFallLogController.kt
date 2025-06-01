@@ -1,16 +1,27 @@
 package com.hairhealth.platform.controller
 
-import com.hairhealth.platform.domain.HairFallCategory
+import com.hairhealth.platform.domain.HairFallCategory // Keep this if service expects enum
 import com.hairhealth.platform.security.UserPrincipal
 import com.hairhealth.platform.service.HairFallLogService
+import com.hairhealth.platform.service.dto.CreateHairFallLogRequest // Import new DTO
+import com.hairhealth.platform.service.dto.HairFallLogResponse // Import new DTO
+import com.hairhealth.platform.service.dto.toResponse // Import mapper
+// It seems toDomain is not directly used here if service expects raw params for create
+// import com.hairhealth.platform.service.dto.toDomain
 import org.springframework.format.annotation.DateTimeFormat
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.server.ResponseStatusException
+import jakarta.validation.Valid // For @Valid if using Spring Boot 3+
 import java.time.LocalDate
 import java.util.*
 
 @RestController
 @RequestMapping("/api/v1/me/hair-fall-logs")
+// @PreAuthorize("hasAuthority('ROLE_USER')") // Add once security config is confirmed
 class HairFallLogController(
     private val hairFallLogService: HairFallLogService
 ) {
@@ -18,32 +29,39 @@ class HairFallLogController(
     @PostMapping
     suspend fun createHairFallLog(
         @AuthenticationPrincipal userPrincipal: UserPrincipal,
-        @RequestBody request: CreateHairFallLogRequest
-    ): HairFallLogResponse {
-        val hairFallLog = hairFallLogService.createHairFallLog(
-            userId = userPrincipal.userId, // Extract from JWT instead of request
+        @Valid @RequestBody request: CreateHairFallLogRequest // Use DTO from service.dto
+    ): ResponseEntity<HairFallLogResponse> {
+        // Adapt to existing service method signature
+        val categoryEnum = try {
+            HairFallCategory.valueOf(request.category.uppercase())
+        } catch (e: IllegalArgumentException) {
+            throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid category: ${request.category}")
+        }
+
+        val domainHairFallLog = hairFallLogService.createHairFallLog(
+            userId = userPrincipal.userId,
             date = request.date,
             count = request.count,
-            category = request.category,
+            category = categoryEnum, // Use converted enum
             description = request.description,
             photoMetadataId = request.photoMetadataId
         )
-
-        return hairFallLog.toResponse()
+        // Map domain object to DTO response
+        return ResponseEntity.status(HttpStatus.CREATED).body(domainHairFallLog.toResponse())
     }
 
     @GetMapping
     suspend fun getHairFallLogs(
         @AuthenticationPrincipal userPrincipal: UserPrincipal,
-        @RequestParam(defaultValue = "20") limit: Int,
+        @RequestParam(defaultValue = "50") limit: Int, // Default to 50 as per existing service
         @RequestParam(defaultValue = "0") offset: Int
-    ): List<HairFallLogResponse> {
+    ): ResponseEntity<List<HairFallLogResponse>> {
         val logs = hairFallLogService.getHairFallLogsByUserId(
-            userId = userPrincipal.userId, // Extract from JWT
+            userId = userPrincipal.userId,
             limit = limit,
             offset = offset
         )
-        return logs.map { it.toResponse() }
+        return ResponseEntity.ok(logs.map { it.toResponse() }) // Map list items
     }
 
     @GetMapping("/date-range")
@@ -51,100 +69,27 @@ class HairFallLogController(
         @AuthenticationPrincipal userPrincipal: UserPrincipal,
         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) startDate: LocalDate,
         @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) endDate: LocalDate
-    ): List<HairFallLogResponse> {
+    ): ResponseEntity<List<HairFallLogResponse>> {
         val logs = hairFallLogService.getHairFallLogsByDateRange(
-            userId = userPrincipal.userId, // Extract from JWT
+            userId = userPrincipal.userId,
             startDate = startDate,
             endDate = endDate
         )
-        return logs.map { it.toResponse() }
+        return ResponseEntity.ok(logs.map { it.toResponse() }) // Map list items
     }
 
     @GetMapping("/{id}")
-    suspend fun getHairFallLog(@PathVariable id: UUID): HairFallLogResponse? {
-        val log = hairFallLogService.getHairFallLogById(id)
-        return log?.toResponse()
-    }
+    suspend fun getHairFallLogById(
+        @AuthenticationPrincipal userPrincipal: UserPrincipal,
+        @PathVariable id: UUID
+    ): ResponseEntity<HairFallLogResponse> {
+        val log = hairFallLogService.getHairFallLogById(id) // Service fetches by id only
+            ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Hair fall log not found")
 
-    @PutMapping("/{id}")
-    suspend fun updateHairFallLog(
-        @PathVariable id: UUID,
-        @RequestBody request: UpdateHairFallLogRequest
-    ): HairFallLogResponse {
-        val updatedLog = hairFallLogService.updateHairFallLog(
-            id = id,
-            date = request.date,
-            count = request.count,
-            category = request.category,
-            description = request.description,
-            photoMetadataId = request.photoMetadataId
-        )
-        return updatedLog.toResponse()
-    }
-
-    @DeleteMapping("/{id}")
-    suspend fun deleteHairFallLog(@PathVariable id: UUID): Map<String, String> {
-        val deleted = hairFallLogService.deleteHairFallLog(id)
-        return if (deleted) {
-            mapOf("status" to "deleted")
-        } else {
-            mapOf("status" to "not_found")
+        // CRITICAL: Enforce user ownership in controller due to service layer limitation
+        if (log.userId != userPrincipal.userId) {
+            throw ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied to this hair fall log")
         }
-    }
-
-    @GetMapping("/stats")
-    suspend fun getHairFallStats(
-        @AuthenticationPrincipal userPrincipal: UserPrincipal
-    ): HairFallStatsResponse {
-        return hairFallLogService.getHairFallStats(userPrincipal.userId) // Extract from JWT
+        return ResponseEntity.ok(log.toResponse())
     }
 }
-
-// Updated Request DTOs (removed userId)
-data class CreateHairFallLogRequest(
-    val date: LocalDate,
-    val count: Int?,
-    val category: HairFallCategory,
-    val description: String?,
-    val photoMetadataId: UUID?
-)
-
-data class UpdateHairFallLogRequest(
-    val date: LocalDate?,
-    val count: Int?,
-    val category: HairFallCategory?,
-    val description: String?,
-    val photoMetadataId: UUID?
-)
-
-data class HairFallLogResponse(
-    val id: UUID,
-    val userId: UUID,
-    val date: LocalDate,
-    val count: Int?,
-    val category: HairFallCategory,
-    val description: String?,
-    val photoMetadataId: UUID?,
-    val createdAt: String,
-    val updatedAt: String
-)
-
-data class HairFallStatsResponse(
-    val totalLogs: Long,
-    val averageCount: Double?,
-    val mostCommonCategory: HairFallCategory?,
-    val recentTrend: String
-)
-
-// Extension function to convert domain to response
-private fun com.hairhealth.platform.domain.HairFallLog.toResponse() = HairFallLogResponse(
-    id = this.id,
-    userId = this.userId,
-    date = this.date,
-    count = this.count,
-    category = this.category,
-    description = this.description,
-    photoMetadataId = this.photoMetadataId,
-    createdAt = this.createdAt.toString(),
-    updatedAt = this.updatedAt.toString()
-)

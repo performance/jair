@@ -1,5 +1,5 @@
 -- Users table
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
     username VARCHAR(100),
@@ -11,7 +11,7 @@ CREATE TABLE users (
 );
 
 -- User profiles table
-CREATE TABLE user_profiles (
+CREATE TABLE IF NOT EXISTS user_profiles (
     user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     first_name VARCHAR(100),
     last_name VARCHAR(100),
@@ -23,7 +23,7 @@ CREATE TABLE user_profiles (
 );
 
 -- Hair fall logs table
-CREATE TABLE hair_fall_logs (
+CREATE TABLE IF NOT EXISTS hair_fall_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     date DATE NOT NULL,
@@ -36,7 +36,7 @@ CREATE TABLE hair_fall_logs (
 );
 
 -- Interventions table
-CREATE TABLE interventions (
+CREATE TABLE IF NOT EXISTS interventions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type VARCHAR(20) NOT NULL,
@@ -55,7 +55,7 @@ CREATE TABLE interventions (
 );
 
 -- Intervention applications table
-CREATE TABLE intervention_applications (
+CREATE TABLE IF NOT EXISTS intervention_applications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     intervention_id UUID NOT NULL REFERENCES interventions(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -65,7 +65,7 @@ CREATE TABLE intervention_applications (
 );
 
 -- Photo metadata table
-CREATE TABLE photo_metadata (
+CREATE TABLE IF NOT EXISTS photo_metadata (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     filename VARCHAR(255) NOT NULL,

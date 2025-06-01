@@ -1,18 +1,24 @@
 package com.hairhealth.platform.controller
 
-import com.hairhealth.platform.domain.InterventionType
 import com.hairhealth.platform.security.UserPrincipal
-import com.hairhealth.platform.service.AdherenceStats
 import com.hairhealth.platform.service.InterventionService
-import org.springframework.format.annotation.DateTimeFormat
+import com.hairhealth.platform.service.InterventionNotFoundException
+import com.hairhealth.platform.service.InterventionInteractionException
+import com.hairhealth.platform.service.dto.CreateInterventionRequest
+import com.hairhealth.platform.service.dto.InterventionApplicationResponse
+import com.hairhealth.platform.service.dto.InterventionResponse
+import com.hairhealth.platform.service.dto.LogApplicationRequest
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.*
-import java.time.Instant
-import java.time.LocalDate
-import java.util.*
+import jakarta.validation.Valid
+import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/me/interventions")
+// @PreAuthorize("hasAuthority('ROLE_USER')") // Add once security config is confirmed
 class InterventionController(
     private val interventionService: InterventionService
 ) {
@@ -20,239 +26,63 @@ class InterventionController(
     @PostMapping
     suspend fun createIntervention(
         @AuthenticationPrincipal userPrincipal: UserPrincipal,
-        @RequestBody request: CreateInterventionRequest
-    ): InterventionResponse {
-        val intervention = interventionService.createIntervention(
-            userId = userPrincipal.userId,
-            type = request.type,
-            productName = request.productName,
-            dosageAmount = request.dosageAmount,
-            frequency = request.frequency,
-            applicationTime = request.applicationTime,
-            startDate = request.startDate,
-            endDate = request.endDate,
-            provider = request.provider,
-            notes = request.notes,
-            sourceRecommendationId = request.sourceRecommendationId
-        )
-
-        return intervention.toResponse()
+        @Valid @RequestBody request: CreateInterventionRequest
+    ): ResponseEntity<InterventionResponse> {
+        try {
+            val intervention = interventionService.createIntervention(userPrincipal.userId, request)
+            return ResponseEntity.status(HttpStatus.CREATED).body(intervention)
+        } catch (e: IllegalArgumentException) {
+            return ResponseEntity.badRequest().body(null) // Consider a proper error response DTO
+        }
     }
 
     @GetMapping
     suspend fun getInterventions(
         @AuthenticationPrincipal userPrincipal: UserPrincipal,
         @RequestParam(defaultValue = "false") includeInactive: Boolean
-    ): List<InterventionResponse> {
-        val interventions = interventionService.getInterventionsByUserId(
-            userPrincipal.userId,
-            includeInactive
-        )
-        return interventions.map { it.toResponse() }
-    }
-
-    @GetMapping("/active")
-    suspend fun getActiveInterventions(
-        @AuthenticationPrincipal userPrincipal: UserPrincipal
-    ): List<InterventionResponse> {
-        val interventions = interventionService.getActiveInterventionsByUserId(userPrincipal.userId)
-        return interventions.map { it.toResponse() }
+    ): ResponseEntity<List<InterventionResponse>> {
+        val interventions = interventionService.getInterventionsForUser(userPrincipal.userId, includeInactive)
+        return ResponseEntity.ok(interventions)
     }
 
     @GetMapping("/{id}")
-    suspend fun getIntervention(@PathVariable id: UUID): InterventionResponse? {
-        val intervention = interventionService.getInterventionById(id)
-        return intervention?.toResponse()
-    }
-
-    @PutMapping("/{id}")
-    suspend fun updateIntervention(
-        @PathVariable id: UUID,
-        @RequestBody request: UpdateInterventionRequest
-    ): InterventionResponse {
-        val existingIntervention = interventionService.getInterventionById(id)
-            ?: throw IllegalArgumentException("Intervention not found")
-
-        val updatedIntervention = existingIntervention.copy(
-            type = request.type ?: existingIntervention.type,
-            productName = request.productName ?: existingIntervention.productName,
-            dosageAmount = request.dosageAmount ?: existingIntervention.dosageAmount,
-            frequency = request.frequency ?: existingIntervention.frequency,
-            applicationTime = request.applicationTime ?: existingIntervention.applicationTime,
-            startDate = request.startDate ?: existingIntervention.startDate,
-            endDate = request.endDate ?: existingIntervention.endDate,
-            provider = request.provider ?: existingIntervention.provider,
-            notes = request.notes ?: existingIntervention.notes
-        )
-
-        val result = interventionService.updateIntervention(updatedIntervention)
-        return result.toResponse()
-    }
-
-    @PostMapping("/{id}/deactivate")
-    suspend fun deactivateIntervention(@PathVariable id: UUID): Map<String, String> {
-        val deactivated = interventionService.deactivateIntervention(id)
-        return if (deactivated) {
-            mapOf("status" to "deactivated")
-        } else {
-            mapOf("status" to "not_found")
-        }
+    suspend fun getInterventionById(
+        @AuthenticationPrincipal userPrincipal: UserPrincipal,
+        @PathVariable id: UUID
+    ): ResponseEntity<InterventionResponse> {
+        return interventionService.getInterventionById(userPrincipal.userId, id)
+            ?.let { ResponseEntity.ok(it) }
+            ?: ResponseEntity.notFound().build()
     }
 
     @PostMapping("/{id}/log-application")
     suspend fun logApplication(
         @AuthenticationPrincipal userPrincipal: UserPrincipal,
-        @PathVariable id: UUID,
-        @RequestBody request: LogApplicationRequest
-    ): InterventionApplicationResponse {
-        val application = interventionService.logApplication(
-            interventionId = id,
-            userId = userPrincipal.userId,
-            timestamp = request.timestamp ?: Instant.now(),
-            notes = request.notes
-        )
-
-        return application.toResponse()
+        @PathVariable id: UUID, // This is interventionId
+        @Valid @RequestBody request: LogApplicationRequest
+    ): ResponseEntity<Any> { // Changed to ResponseEntity<Any> for error handling
+        return try {
+            val application = interventionService.logInterventionApplication(userPrincipal.userId, id, request)
+            ResponseEntity.status(HttpStatus.CREATED).body(application)
+        } catch (e: InterventionNotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("message" to e.message))
+        } catch (e: InterventionInteractionException) {
+            ResponseEntity.status(HttpStatus.BAD_REQUEST).body(mapOf("message" to e.message))
+        }
     }
 
     @GetMapping("/{id}/applications")
     suspend fun getApplications(
-        @PathVariable id: UUID,
+        @AuthenticationPrincipal userPrincipal: UserPrincipal,
+        @PathVariable id: UUID, // This is interventionId
         @RequestParam(defaultValue = "50") limit: Int,
         @RequestParam(defaultValue = "0") offset: Int
-    ): List<InterventionApplicationResponse> {
-        val applications = interventionService.getApplicationsByInterventionId(id, limit, offset)
-        return applications.map { it.toResponse() }
-    }
-
-    @GetMapping("/{id}/adherence")
-    suspend fun getAdherenceStats(@PathVariable id: UUID): AdherenceStatsResponse {
-        val stats = interventionService.getAdherenceStats(id)
-        return AdherenceStatsResponse(
-            interventionId = stats.interventionId,
-            expectedApplications = stats.expectedApplications,
-            actualApplications = stats.actualApplications,
-            adherenceRate = stats.adherenceRate,
-            adherencePercentage = (stats.adherenceRate * 100).toInt(),
-            daysSinceStart = stats.daysSinceStart,
-            lastApplication = stats.lastApplication?.toString(),
-            adherenceLevel = when {
-                stats.adherenceRate >= 0.9 -> "EXCELLENT"
-                stats.adherenceRate >= 0.75 -> "GOOD"
-                stats.adherenceRate >= 0.5 -> "FAIR"
-                else -> "POOR"
-            }
-        )
-    }
-
-    @GetMapping("/applications/date-range")
-    suspend fun getApplicationsByDateRange(
-        @AuthenticationPrincipal userPrincipal: UserPrincipal,
-        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) startDate: LocalDate,
-        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) endDate: LocalDate
-    ): List<InterventionApplicationResponse> {
-        val applications = interventionService.getApplicationsByUserIdAndDateRange(
-            userPrincipal.userId,
-            startDate,
-            endDate
-        )
-        return applications.map { it.toResponse() }
+    ): ResponseEntity<Any> { // Changed to ResponseEntity<Any> for error handling
+         return try {
+            val applications = interventionService.getApplicationsForIntervention(userPrincipal.userId, id, limit, offset)
+            ResponseEntity.ok(applications)
+        } catch (e: InterventionNotFoundException) {
+            ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("message" to e.message))
+        }
     }
 }
-
-// Request/Response DTOs
-data class CreateInterventionRequest(
-    val type: InterventionType,
-    val productName: String,
-    val dosageAmount: String?,
-    val frequency: String,
-    val applicationTime: String?,
-    val startDate: LocalDate,
-    val endDate: LocalDate?,
-    val provider: String?,
-    val notes: String?,
-    val sourceRecommendationId: UUID?
-)
-
-data class UpdateInterventionRequest(
-    val type: InterventionType?,
-    val productName: String?,
-    val dosageAmount: String?,
-    val frequency: String?,
-    val applicationTime: String?,
-    val startDate: LocalDate?,
-    val endDate: LocalDate?,
-    val provider: String?,
-    val notes: String?
-)
-
-data class LogApplicationRequest(
-    val timestamp: Instant?,
-    val notes: String?
-)
-
-data class InterventionResponse(
-    val id: UUID,
-    val userId: UUID,
-    val type: InterventionType,
-    val productName: String,
-    val dosageAmount: String?,
-    val frequency: String,
-    val applicationTime: String?,
-    val startDate: LocalDate,
-    val endDate: LocalDate?,
-    val isActive: Boolean,
-    val provider: String?,
-    val notes: String?,
-    val sourceRecommendationId: UUID?,
-    val createdAt: String,
-    val updatedAt: String
-)
-
-data class InterventionApplicationResponse(
-    val id: UUID,
-    val interventionId: UUID,
-    val userId: UUID,
-    val timestamp: String,
-    val notes: String?,
-    val createdAt: String
-)
-
-data class AdherenceStatsResponse(
-    val interventionId: UUID,
-    val expectedApplications: Int,
-    val actualApplications: Int,
-    val adherenceRate: Double,
-    val adherencePercentage: Int,
-    val daysSinceStart: Int,
-    val lastApplication: String?,
-    val adherenceLevel: String
-)
-
-// Extension functions
-private fun com.hairhealth.platform.domain.Intervention.toResponse() = InterventionResponse(
-    id = this.id,
-    userId = this.userId,
-    type = this.type,
-    productName = this.productName,
-    dosageAmount = this.dosageAmount,
-    frequency = this.frequency,
-    applicationTime = this.applicationTime,
-    startDate = this.startDate,
-    endDate = this.endDate,
-    isActive = this.isActive,
-    provider = this.provider,
-    notes = this.notes,
-    sourceRecommendationId = this.sourceRecommendationId,
-    createdAt = this.createdAt.toString(),
-    updatedAt = this.updatedAt.toString()
-)
-
-private fun com.hairhealth.platform.domain.InterventionApplication.toResponse() = InterventionApplicationResponse(
-    id = this.id,
-    interventionId = this.interventionId,
-    userId = this.userId,
-    timestamp = this.timestamp.toString(),
-    notes = this.notes,
-    createdAt = this.createdAt.toString()
-)

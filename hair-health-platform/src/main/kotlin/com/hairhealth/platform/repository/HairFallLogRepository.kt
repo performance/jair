@@ -6,7 +6,8 @@ import java.util.UUID
 
 interface HairFallLogRepository {
     suspend fun create(hairFallLog: HairFallLog): HairFallLog
-    suspend fun findById(id: UUID): HairFallLog?
+    suspend fun findById(id: UUID): HairFallLog? // General find by ID
+    suspend fun findByIdAndUserId(id: UUID, userId: UUID): HairFallLog? // Find by ID ensuring user ownership
     suspend fun findByUserId(userId: UUID, limit: Int = 50, offset: Int = 0): List<HairFallLog>
     suspend fun findByUserIdAndDateRange(
         userId: UUID, 
