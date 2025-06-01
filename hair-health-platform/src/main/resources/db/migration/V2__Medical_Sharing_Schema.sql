@@ -1,5 +1,5 @@
 -- Medical sharing sessions
-CREATE TABLE medical_sharing_sessions (
+CREATE TABLE IF NOT EXISTS medical_sharing_sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     patient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     professional_id UUID NOT NULL, -- References professionals table (future)
@@ -18,7 +18,7 @@ CREATE TABLE medical_sharing_sessions (
 );
 
 -- Doctor access sessions
-CREATE TABLE doctor_access_sessions (
+CREATE TABLE IF NOT EXISTS doctor_access_sessions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     medical_session_id UUID NOT NULL REFERENCES medical_sharing_sessions(id) ON DELETE CASCADE,
     professional_id UUID NOT NULL,
@@ -32,7 +32,7 @@ CREATE TABLE doctor_access_sessions (
 );
 
 -- Individual photo viewing events
-CREATE TABLE viewing_events (
+CREATE TABLE IF NOT EXISTS viewing_events (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     access_session_id UUID NOT NULL REFERENCES doctor_access_sessions(id) ON DELETE CASCADE,
     photo_id UUID NOT NULL REFERENCES photo_metadata(id) ON DELETE CASCADE,
@@ -47,7 +47,7 @@ CREATE TABLE viewing_events (
 );
 
 -- Medical notifications
-CREATE TABLE medical_notifications (
+CREATE TABLE IF NOT EXISTS medical_notifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     recipient_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     type VARCHAR(50) NOT NULL,
@@ -61,7 +61,7 @@ CREATE TABLE medical_notifications (
 );
 
 -- Ephemeral decryption keys
-CREATE TABLE ephemeral_decryption_keys (
+CREATE TABLE IF NOT EXISTS ephemeral_decryption_keys (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     session_id UUID NOT NULL REFERENCES medical_sharing_sessions(id) ON DELETE CASCADE,
     photo_id UUID NOT NULL REFERENCES photo_metadata(id) ON DELETE CASCADE,

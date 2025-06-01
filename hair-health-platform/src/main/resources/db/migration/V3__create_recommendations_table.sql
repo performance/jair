@@ -1,4 +1,4 @@
-CREATE TABLE recommendations (
+CREATE TABLE IF NOT EXISTS recommendations (
     id UUID PRIMARY KEY,
     professional_id UUID NOT NULL,
     user_id UUID NOT NULL,

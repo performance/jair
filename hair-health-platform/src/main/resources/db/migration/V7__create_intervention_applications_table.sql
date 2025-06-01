@@ -1,4 +1,4 @@
-CREATE TABLE intervention_applications (
+CREATE TABLE IF NOT EXISTS intervention_applications (
     id UUID PRIMARY KEY,
     intervention_id UUID NOT NULL,
     user_id UUID NOT NULL, -- Denormalized for query convenience

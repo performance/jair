@@ -1,4 +1,4 @@
-CREATE TABLE hair_fall_logs (
+CREATE TABLE IF NOT EXISTS hair_fall_logs (
     id UUID PRIMARY KEY,
     user_id UUID NOT NULL,
     date DATE NOT NULL,

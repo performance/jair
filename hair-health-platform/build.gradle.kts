@@ -3,6 +3,7 @@ plugins {
 	kotlin("plugin.spring") version "1.9.25"
 	id("org.springframework.boot") version "3.4.5"
 	id("io.spring.dependency-management") version "1.1.7"
+    id("org.flywaydb.flyway") version "10.20.1"
 }
 
 group = "com.hairhealth"
@@ -12,6 +13,17 @@ java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(21)
 	}
+}
+
+buildscript {
+    repositories {
+        mavenCentral() // Or jcenter(), or your repository where these dependencies are
+    }
+    dependencies {
+        // These are the crucial lines!
+        classpath("org.postgresql:postgresql:42.7.5") // Make sure this version matches what you found with `gradlew dependencies`
+        classpath("org.flywaydb:flyway-database-postgresql:10.20.1") // Make sure this version matches your Flyway plugin version
+    }
 }
 
 repositories {
@@ -52,7 +64,8 @@ dependencies {
     
     // Database
     // developmentOnly("org.springframework.boot:spring-boot-docker-compose")
-    runtimeOnly("org.postgresql:postgresql")
+    implementation("org.postgresql:postgresql")
+    // runtimeOnly("org.postgresql:postgresql")
     
 	// Swagger/OpenAPI 3
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0")
@@ -71,6 +84,14 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
+flyway {
+    url = "jdbc:postgresql://localhost:5432/hairhealth"
+    user = "hairhealth_user"
+    password = "hairhealth_dev_password"
+    // Add this to make sure Flyway knows where to find your migrations
+    // If your migrations are in src/main/resources/db/migration
+    locations = arrayOf("classpath:db/migration")
+}
 kotlin {
 	compilerOptions {
 		freeCompilerArgs.addAll("-Xjsr305=strict")

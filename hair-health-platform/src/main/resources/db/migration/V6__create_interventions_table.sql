@@ -1,4 +1,4 @@
-CREATE TABLE interventions (
+CREATE TABLE IF NOT EXISTS interventions (
     id UUID PRIMARY KEY,
     user_id UUID NOT NULL,
     type VARCHAR(50) NOT NULL, -- TOPICAL, ORAL, OTHER_TREATMENT
