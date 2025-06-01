@@ -4,6 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.hairhealth.platform.domain.*
 import com.hairhealth.platform.repository.*
 import com.hairhealth.platform.service.*
+import com.hairhealth.platform.controller.RequestAccessRequest
+import com.hairhealth.platform.controller.RevokeMedicalSharingRequest
+
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -187,7 +190,9 @@ class MedicalSharingIntegrationTest {
         val accessRequest = RequestAccessRequest(
             deviceFingerprint = "test-device-123",
             userAgent = "Mozilla/5.0 Test Browser",
-            ipAddress = "192.168.1.100"
+            ipAddress = "192.168.1.100",
+            screenResolution = null, // Explicitly providing null
+            timeZone = null // Explicitly providing null
         )
         
         mockMvc.perform(
@@ -233,7 +238,9 @@ class MedicalSharingIntegrationTest {
         val accessRequest = RequestAccessRequest(
             deviceFingerprint = "test-device-123",
             userAgent = "Mozilla/5.0 Test Browser",
-            ipAddress = "192.168.1.100"
+            ipAddress = "192.168.1.100",
+            screenResolution = null, // Explicitly providing null
+            timeZone = null // Explicitly providing null
         )
         
         mockMvc.perform(

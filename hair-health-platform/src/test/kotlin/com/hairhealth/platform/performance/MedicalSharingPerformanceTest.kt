@@ -301,7 +301,8 @@ class MedicalSharingPerformanceTest {
                             1 -> SuspiciousActivityType.DOWNLOAD_ATTEMPT
                             2 -> SuspiciousActivityType.PRINT_ATTEMPT
                             3 -> SuspiciousActivityType.COPY_ATTEMPT
-                            else -> SuspiciousActivityType.UNUSUAL_DEVICE_BEHAVIOR
+                            4 -> SuspiciousActivityType.UNUSUAL_DEVICE_BEHAVIOR
+                            else -> throw IllegalStateException("Unexpected value for reportIndex % 5: \${reportIndex % 5}")
                         }
                         
                         val result = medicalSharingService.recordSuspiciousActivity(
@@ -357,7 +358,7 @@ class MedicalSharingPerformanceTest {
                     
                     try {
                         when (operation) {
-                            "create" -> {
+                            "create" -> run {
                                 val patient = patients.random()
                                 val photos = createTestPhotos(patient.id, 2)
                                 medicalSharingService.createMedicalSharingSession(
@@ -374,7 +375,7 @@ class MedicalSharingPerformanceTest {
                                 results["create"]?.incrementAndGet()
                             }
                             
-                            "access" -> {
+                            "access" -> run {
                                 // Try to access a random existing session
                                 val patient = patients.random()
                                 val sessions = medicalSharingService.getPatientSharingSessions(patient.id)
@@ -396,7 +397,7 @@ class MedicalSharingPerformanceTest {
                                 }
                             }
                             
-                            "view" -> {
+                            "view" -> run {
                                 // Try to view photos from existing sessions
                                 val doctor = doctors.random()
                                 val sessions = medicalSharingService.getProfessionalAccessibleSessions(doctor.id)
@@ -435,7 +436,7 @@ class MedicalSharingPerformanceTest {
                                 }
                             }
                             
-                            "revoke" -> {
+                            "revoke" -> run {
                                 // Try to revoke existing sessions
                                 val patient = patients.random()
                                 val sessions = medicalSharingService.getPatientSharingSessions(patient.id)
@@ -453,6 +454,7 @@ class MedicalSharingPerformanceTest {
                                     results["revoke"]?.incrementAndGet()
                                 }
                             }
+                            else -> throw IllegalStateException("Unknown operation: $operation")
                         }
                         
                     } catch (e: Exception) {
@@ -541,7 +543,7 @@ class MedicalSharingPerformanceTest {
     private suspend fun createTestUser(email: String): com.hairhealth.platform.domain.User {
         val user = userService.createUser(
             email = email,
-            password = "testpassword123",
+            passwordHash = "testpassword123",
             username = email.split("@")[0]
         )
         return user

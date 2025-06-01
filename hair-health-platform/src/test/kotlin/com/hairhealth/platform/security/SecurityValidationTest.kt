@@ -469,7 +469,7 @@ class SecurityValidationTest {
     private suspend fun createTestUser(email: String): com.hairhealth.platform.domain.User {
         return userService.createUser(
             email = email,
-            password = "testpassword123",
+            passwordHash = "testpassword123",
             username = email.split("@")[0]
         )
     }
