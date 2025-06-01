@@ -24,15 +24,15 @@ class HairFallLogService(
         photoMetadataId: UUID?
     ): HairFallLog {
         val hairFallLog = HairFallLog(
-            // id = UUID.randomUUID(), // This should be handled by domain default or here if not
+            id = UUID.randomUUID(), // Explicitly initialize id
             userId = userId,
             date = date,
             count = count,
             category = category,
             description = description,
-            photoMetadataId = photoMetadataId
-            // createdAt = Instant.now(), // This should be handled by domain default or here if not
-            // updatedAt = Instant.now() // This should be handled by domain default or here if not
+            photoMetadataId = photoMetadataId,
+            createdAt = Instant.now(), // Explicitly initialize createdAt
+            updatedAt = Instant.now()  // Explicitly initialize updatedAt
         )
         // Note: The service method used by the controller in the previous subtask was the one from *this* file,
         // not the refactored one that was intended to replace it (due to overwrite failing).
