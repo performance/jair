@@ -87,7 +87,22 @@ class RecommendationService(
             } ?: existingRecommendation.status,
             updatedAt = Instant.now()
         )
-        recommendationRepository.save(updatedRecommendation).toResponse()
+        val savedUpdatedRec = recommendationRepository.save(updatedRecommendation)
+
+        auditLogService.logEvent(
+            actorId = professionalId.toString(),
+            actorType = ActorType.PROFESSIONAL,
+            action = "UPDATE_RECOMMENDATION_SUCCESS",
+            targetEntityType = "RECOMMENDATION",
+            targetEntityId = savedUpdatedRec.id.toString(),
+            status = AuditEventStatus.SUCCESS,
+            details = mapOf(
+                "professionalId" to professionalId.toString(),
+                "recommendationId" to savedUpdatedRec.id.toString(),
+                "updatedFields" to request.toString() // Consider more specific field logging if needed
+            )
+        )
+        savedUpdatedRec.toResponse()
     }
 
     suspend fun deleteRecommendation(professionalId: UUID, recommendationId: UUID): Boolean = withContext(Dispatchers.IO) {
@@ -103,6 +118,19 @@ class RecommendationService(
             updatedAt = Instant.now()
         )
         recommendationRepository.save(deletedRecommendation)
+        auditLogService.logEvent(
+            actorId = professionalId.toString(),
+            actorType = ActorType.PROFESSIONAL,
+            action = "DELETE_RECOMMENDATION_SUCCESS", // Soft delete
+            targetEntityType = "RECOMMENDATION",
+            targetEntityId = recommendation.id.toString(),
+            status = AuditEventStatus.SUCCESS,
+            details = mapOf(
+                "professionalId" to professionalId.toString(),
+                "recommendationId" to recommendation.id.toString(),
+                "newStatus" to RecommendationStatus.DELETED.name
+            )
+        )
         true
     }
 

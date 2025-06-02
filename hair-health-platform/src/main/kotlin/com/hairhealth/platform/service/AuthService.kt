@@ -140,11 +140,31 @@ class AuthService(
         )
 
         // Generate tokens
+        val userRoles = mutableListOf("USER")
+        // Placeholder logic for identifying professionals
+        if (user.email == "professional@hairhealth.com" || user.email.endsWith("@prof.hairhealth.com") || user.email == "prof@example.com") {
+            userRoles.add("PROFESSIONAL")
+        }
         val userPrincipal = UserPrincipal(
             userId = user.id,
             email = user.email,
             username = user.username,
-            roles = listOf("USER") // TODO: Add role management
+            roles = userRoles.distinct() // Use the determined roles
+        )
+
+        // Update audit log actor type if professional (simplified for this example)
+        // A more robust solution might involve passing roles to auditLogService or having distinct login flows.
+        val actorTypeForAudit = if (userRoles.contains("PROFESSIONAL")) ActorType.PROFESSIONAL else ActorType.USER
+
+        // Log successful login
+        auditLogService.logEvent(
+            actorId = user.id.toString(),
+            actorType = actorTypeForAudit,
+            action = if (actorTypeForAudit == ActorType.PROFESSIONAL) "PROFESSIONAL_LOGIN_SUCCESS" else "USER_LOGIN_SUCCESS",
+            targetEntityType = "USER_ACCOUNT",
+            targetEntityId = user.id.toString(),
+            status = AuditEventStatus.SUCCESS,
+            details = mapOf("userId" to user.id.toString(), "email" to user.email, "roles" to userRoles.joinToString())
         )
 
         val accessToken = jwtService.generateAccessToken(userPrincipal)
