@@ -5,6 +5,8 @@ import com.hairhealth.platform.service.HairFallLogService
 import com.hairhealth.platform.service.InterventionService
 import com.hairhealth.platform.service.PhotoMetadataService
 import com.hairhealth.platform.service.UserService
+import com.hairhealth.platform.service.dto.CreateInterventionRequest // Import DTO
+import com.hairhealth.platform.service.dto.LogApplicationRequest // Import DTO
 import org.springframework.web.bind.annotation.*
 import java.time.Instant
 import java.time.LocalDate
@@ -86,9 +88,8 @@ class DevController(
         val userUuid = UUID.fromString(userId)
         
         // Create sample interventions
-        val minoxidil = interventionService.createIntervention(
-            userId = userUuid,
-            type = InterventionType.TOPICAL,
+        val minoxidilRequest = CreateInterventionRequest(
+            type = InterventionType.TOPICAL.name,
             productName = "Minoxidil 5%",
             dosageAmount = "1ml",
             frequency = "Twice Daily",
@@ -99,10 +100,10 @@ class DevController(
             notes = "Apply to dry scalp, massage gently",
             sourceRecommendationId = null
         )
+        val minoxidilResponse = interventionService.createIntervention(userId = userUuid, request = minoxidilRequest)
         
-        val finasteride = interventionService.createIntervention(
-            userId = userUuid,
-            type = InterventionType.ORAL,
+        val finasterideRequest = CreateInterventionRequest(
+            type = InterventionType.ORAL.name,
             productName = "Finasteride 1mg",
             dosageAmount = "1mg",
             frequency = "Once Daily",
@@ -113,52 +114,62 @@ class DevController(
             notes = "Take with breakfast",
             sourceRecommendationId = null
         )
+        val finasterideResponse = interventionService.createIntervention(userId = userUuid, request = finasterideRequest)
         
         // Create sample applications for the last week
         val sampleApplications = mutableListOf<Map<String, Any>>()
         for (i in 1..7) {
             // Minoxidil applications (twice daily)
-            val morningApp = interventionService.logApplication(
-                interventionId = minoxidil.id,
-                userId = userUuid,
+            val morningAppRequest = LogApplicationRequest(
                 timestamp = LocalDate.now().minusDays(i.toLong()).atTime(8, 0).atZone(java.time.ZoneId.systemDefault()).toInstant(),
                 notes = if (i == 1) "Forgot evening dose" else null
             )
+            interventionService.logInterventionApplication(
+                userId = userUuid,
+                interventionId = minoxidilResponse.id,
+                request = morningAppRequest
+            )
             
             if (i != 1) { // Skip one evening application to simulate missed dose
-                val eveningApp = interventionService.logApplication(
-                    interventionId = minoxidil.id,
-                    userId = userUuid,
+                val eveningAppRequest = LogApplicationRequest(
                     timestamp = LocalDate.now().minusDays(i.toLong()).atTime(20, 0).atZone(java.time.ZoneId.systemDefault()).toInstant(),
                     notes = null
                 )
+                interventionService.logInterventionApplication(
+                    userId = userUuid,
+                    interventionId = minoxidilResponse.id,
+                    request = eveningAppRequest
+                )
                 sampleApplications.add(mapOf("type" to "evening", "date" to LocalDate.now().minusDays(i.toLong())))
-        }
+            }
         
-        sampleApplications.add(mapOf("type" to "morning", "date" to LocalDate.now().minusDays(i.toLong())))
+            sampleApplications.add(mapOf("type" to "morning", "date" to LocalDate.now().minusDays(i.toLong())))
         
-        // Finasteride applications (once daily)
-        val finasterideApp = interventionService.logApplication(
-            interventionId = finasteride.id,
-            userId = userUuid,
-            timestamp = LocalDate.now().minusDays(i.toLong()).atTime(8, 30).atZone(java.time.ZoneId.systemDefault()).toInstant(),
-            notes = null
-        )
+            // Finasteride applications (once daily)
+            val finasterideAppRequest = LogApplicationRequest(
+                timestamp = LocalDate.now().minusDays(i.toLong()).atTime(8, 30).atZone(java.time.ZoneId.systemDefault()).toInstant(),
+                notes = null
+            )
+            interventionService.logInterventionApplication(
+                userId = userUuid,
+                interventionId = finasterideResponse.id,
+                request = finasterideAppRequest
+            )
         }
     
         return mapOf(
             "interventions" to listOf(
                 mapOf(
-                    "id" to minoxidil.id,
-                    "productName" to minoxidil.productName,
-                    "type" to minoxidil.type,
-                    "frequency" to minoxidil.frequency
+                    "id" to minoxidilResponse.id,
+                    "productName" to minoxidilResponse.productName,
+                    "type" to minoxidilResponse.type,
+                    "frequency" to minoxidilResponse.frequency
                 ),
                 mapOf(
-                    "id" to finasteride.id,
-                    "productName" to finasteride.productName,
-                    "type" to finasteride.type,
-                    "frequency" to finasteride.frequency
+                    "id" to finasterideResponse.id,
+                    "productName" to finasterideResponse.productName,
+                    "type" to finasterideResponse.type,
+                    "frequency" to finasterideResponse.frequency
                 )
             ),
             "applicationsCreated" to sampleApplications.size,

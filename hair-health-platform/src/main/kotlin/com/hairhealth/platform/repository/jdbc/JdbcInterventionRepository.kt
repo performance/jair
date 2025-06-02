@@ -89,6 +89,26 @@ class JdbcInterventionRepository(
         jdbcTemplate.query(sql, params) { rs, _ -> mapRowToIntervention(rs) }
     }
 
+    override suspend fun findByIdAndUserId(id: UUID, userId: UUID): Intervention? = withContext(Dispatchers.IO) {
+        val sql = """
+            SELECT id, user_id, type, product_name, dosage_amount, frequency,
+                   application_time, start_date, end_date, is_active, provider,
+                   notes, source_recommendation_id, created_at, updated_at
+            FROM interventions
+            WHERE id = :id AND user_id = :userId
+        """.trimIndent()
+
+        val params = MapSqlParameterSource()
+            .addValue("id", id)
+            .addValue("userId", userId)
+
+        try {
+            jdbcTemplate.queryForObject(sql, params) { rs, _ -> mapRowToIntervention(rs) }
+        } catch (e: Exception) { // org.springframework.dao.EmptyResultDataAccessException more specific
+            null
+        }
+    }
+
     override suspend fun findActiveByUserId(userId: UUID): List<Intervention> = withContext(Dispatchers.IO) {
         return@withContext findByUserId(userId, includeInactive = false)
     }
@@ -218,21 +238,21 @@ class JdbcInterventionApplicationRepository(
 
     override suspend fun findByUserIdAndDateRange(
         userId: UUID,
-        startDate: LocalDate,
-        endDate: LocalDate
+        startDate: java.time.Instant, // Changed from LocalDate
+        endDate: java.time.Instant   // Changed from LocalDate
     ): List<InterventionApplication> = withContext(Dispatchers.IO) {
         val sql = """
             SELECT id, intervention_id, user_id, timestamp, notes, created_at
             FROM intervention_applications
             WHERE user_id = :userId 
-            AND DATE(timestamp) BETWEEN :startDate AND :endDate
+            AND timestamp >= :startDate AND timestamp < :endDate
             ORDER BY timestamp DESC
-        """.trimIndent()
+        """.trimIndent() // Adjusted query for Instant range
 
         val params = MapSqlParameterSource()
             .addValue("userId", userId)
-            .addValue("startDate", Date.valueOf(startDate))
-            .addValue("endDate", Date.valueOf(endDate))
+            .addValue("startDate", Timestamp.from(startDate))
+            .addValue("endDate", Timestamp.from(endDate))
 
         jdbcTemplate.query(sql, params) { rs, _ -> mapRowToInterventionApplication(rs) }
     }

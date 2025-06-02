@@ -5,6 +5,14 @@ import com.hairhealth.platform.domain.InterventionApplication
 import com.hairhealth.platform.domain.InterventionType
 import com.hairhealth.platform.repository.InterventionRepository
 import com.hairhealth.platform.repository.InterventionApplicationRepository
+import com.hairhealth.platform.service.dto.CreateInterventionRequest
+import com.hairhealth.platform.service.dto.InterventionApplicationResponse
+import com.hairhealth.platform.service.dto.InterventionResponse
+import com.hairhealth.platform.service.dto.LogApplicationRequest
+import com.hairhealth.platform.service.dto.toDomain
+import com.hairhealth.platform.service.dto.toResponse
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.springframework.stereotype.Service
 import java.time.Instant
 import java.time.LocalDate
@@ -16,138 +24,75 @@ class InterventionService(
     private val interventionApplicationRepository: InterventionApplicationRepository
 ) {
 
-    suspend fun createIntervention(
-        userId: UUID,
-        type: InterventionType,
-        productName: String,
-        dosageAmount: String?,
-        frequency: String,
-        applicationTime: String?,
-        startDate: LocalDate,
-        endDate: LocalDate?,
-        provider: String?,
-        notes: String?,
-        sourceRecommendationId: UUID?
-    ): Intervention {
-        val intervention = Intervention(
+    suspend fun createIntervention(userId: UUID, request: CreateInterventionRequest): InterventionResponse = withContext(Dispatchers.IO) {
+        val intervention = request.toDomain(userId).copy(
+            // Ensure new instances get fresh timestamps and ID, if not handled by toDomain or default constructor
             id = UUID.randomUUID(),
-            userId = userId,
-            type = type,
-            productName = productName,
-            dosageAmount = dosageAmount,
-            frequency = frequency,
-            applicationTime = applicationTime,
-            startDate = startDate,
-            endDate = endDate,
-            isActive = true,
-            provider = provider,
-            notes = notes,
-            sourceRecommendationId = sourceRecommendationId,
             createdAt = Instant.now(),
             updatedAt = Instant.now()
         )
-
-        return interventionRepository.create(intervention)
+        interventionRepository.create(intervention).toResponse()
     }
 
-    suspend fun getInterventionById(id: UUID): Intervention? {
-        return interventionRepository.findById(id)
+    suspend fun getInterventionById(userId: UUID, interventionId: UUID): InterventionResponse? = withContext(Dispatchers.IO) {
+        interventionRepository.findByIdAndUserId(interventionId, userId)?.toResponse()
     }
 
-    suspend fun getInterventionsByUserId(userId: UUID, includeInactive: Boolean = false): List<Intervention> {
-        return interventionRepository.findByUserId(userId, includeInactive)
+    suspend fun getInterventionsForUser(userId: UUID, includeInactive: Boolean): List<InterventionResponse> = withContext(Dispatchers.IO) {
+        interventionRepository.findByUserId(userId, includeInactive).map { it.toResponse() }
     }
 
+    // Keeping existing getActiveInterventionsByUserId for potential internal use or if other parts of app use it.
     suspend fun getActiveInterventionsByUserId(userId: UUID): List<Intervention> {
         return interventionRepository.findActiveByUserId(userId)
     }
 
+    // Keeping existing updateIntervention for potential internal use.
     suspend fun updateIntervention(intervention: Intervention): Intervention {
         return interventionRepository.update(intervention.copy(updatedAt = Instant.now()))
     }
 
+    // Keeping existing deactivateIntervention.
     suspend fun deactivateIntervention(id: UUID): Boolean {
         return interventionRepository.deactivate(id)
     }
 
-    suspend fun logApplication(
-        interventionId: UUID,
-        userId: UUID,
-        timestamp: Instant = Instant.now(),
-        notes: String?
-    ): InterventionApplication {
-        val application = InterventionApplication(
-            id = UUID.randomUUID(),
-            interventionId = interventionId,
-            userId = userId,
-            timestamp = timestamp,
-            notes = notes,
-            createdAt = Instant.now()
+    suspend fun logInterventionApplication(userId: UUID, interventionId: UUID, request: LogApplicationRequest): InterventionApplicationResponse = withContext(Dispatchers.IO) {
+        val intervention = interventionRepository.findByIdAndUserId(interventionId, userId)
+            ?: throw InterventionNotFoundException("Active intervention not found for user or ID: $interventionId")
+
+        if (!intervention.isActive) {
+             throw InterventionInteractionException("Cannot log application for an inactive intervention.")
+        }
+
+        val application = request.toDomain(interventionId, userId, Instant.now()).copy(
+             id = UUID.randomUUID(),
+             createdAt = Instant.now()
         )
-
-        return interventionApplicationRepository.create(application)
+        interventionApplicationRepository.create(application).toResponse()
     }
 
-    suspend fun getApplicationsByInterventionId(
-        interventionId: UUID,
-        limit: Int = 50,
-        offset: Int = 0
-    ): List<InterventionApplication> {
-        return interventionApplicationRepository.findByInterventionId(interventionId, limit, offset)
+    suspend fun getApplicationsForIntervention(userId: UUID, interventionId: UUID, limit: Int, offset: Int): List<InterventionApplicationResponse> = withContext(Dispatchers.IO) {
+        // Verify user owns the intervention first
+        interventionRepository.findByIdAndUserId(interventionId, userId)
+            ?: throw InterventionNotFoundException("Intervention not found for user or ID: $interventionId")
+
+        interventionApplicationRepository.findByInterventionId(interventionId, limit, offset).map { it.toResponse() }
     }
 
+    // Keeping existing getApplicationsByUserIdAndDateRange for potential internal use.
+    // Note: Its signature in repository (LocalDate) differs from the updated one (Instant).
+    // This might need alignment if this method is to be used widely and consistently.
+    // For this subtask, this method is not directly exposed via the new controller endpoints.
     suspend fun getApplicationsByUserIdAndDateRange(
         userId: UUID,
-        startDate: LocalDate,
-        endDate: LocalDate
+        startDate: Instant, // Matching updated repo interface
+        endDate: Instant   // Matching updated repo interface
     ): List<InterventionApplication> {
         return interventionApplicationRepository.findByUserIdAndDateRange(userId, startDate, endDate)
     }
-
-    suspend fun getAdherenceStats(interventionId: UUID): AdherenceStats {
-        val intervention = interventionRepository.findById(interventionId)
-            ?: throw IllegalArgumentException("Intervention not found")
-
-        val applications = interventionApplicationRepository.findByInterventionId(interventionId, limit = 1000)
-        
-        // Calculate adherence based on frequency and applications
-        val expectedApplicationsPerDay = parseFrequencyToDaily(intervention.frequency)
-        val daysSinceStart = java.time.temporal.ChronoUnit.DAYS.between(intervention.startDate, LocalDate.now()) + 1
-        val expectedTotalApplications = (daysSinceStart * expectedApplicationsPerDay).toInt()
-        
-        val actualApplications = applications.size
-        val adherenceRate = if (expectedTotalApplications > 0) {
-            (actualApplications.toDouble() / expectedTotalApplications).coerceAtMost(1.0)
-        } else 0.0
-
-        return AdherenceStats(
-            interventionId = interventionId,
-            expectedApplications = expectedTotalApplications,
-            actualApplications = actualApplications,
-            adherenceRate = adherenceRate,
-            daysSinceStart = daysSinceStart.toInt(),
-            lastApplication = applications.maxByOrNull { it.timestamp }?.timestamp
-        )
-    }
-
-    private fun parseFrequencyToDaily(frequency: String): Double {
-        return when (frequency.lowercase()) {
-            "once daily", "daily", "1x daily" -> 1.0
-            "twice daily", "2x daily" -> 2.0
-            "three times daily", "3x daily" -> 3.0
-            "every other day", "every 2 days" -> 0.5
-            "twice weekly", "2x weekly" -> 2.0 / 7.0
-            "weekly", "once weekly", "1x weekly" -> 1.0 / 7.0
-            else -> 1.0 // Default assumption
-        }
-    }
 }
 
-data class AdherenceStats(
-    val interventionId: UUID,
-    val expectedApplications: Int,
-    val actualApplications: Int,
-    val adherenceRate: Double,
-    val daysSinceStart: Int,
-    val lastApplication: Instant?
-)
+// Custom Exceptions
+class InterventionNotFoundException(message: String) : RuntimeException(message)
+class InterventionInteractionException(message: String) : RuntimeException(message)
