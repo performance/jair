@@ -18,7 +18,7 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1/professionals/me/recommendations")
-// @PreAuthorize("hasAuthority('ROLE_PROFESSIONAL')") // Uncomment when roles are fully set up
+@PreAuthorize("hasAuthority('ROLE_PROFESSIONAL')")
 class ProfessionalRecommendationController(
     private val recommendationService: RecommendationService
 ) {
