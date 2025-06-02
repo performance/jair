@@ -38,12 +38,12 @@ app.use((req, res, next) => {
 // For async errors not wrapped in try-catch and passed to next(), you might need more robust setup or use a library.
 app.use((err, req, res, next) => {
   console.error(err.stack); // Log error stack for debugging
-
+  
   // Check if the error is one of our known types or has a status code
   if (err.status) {
     return res.status(err.status).json({ message: err.message });
   }
-
+  
   // Default to 500 Internal Server Error
   res.status(500).json({ message: 'Internal Server Error' });
 });

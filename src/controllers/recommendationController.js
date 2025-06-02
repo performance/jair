@@ -105,7 +105,7 @@ async function updateRecommendation(req, res) {
         return res.status(400).json({ message: 'Cannot update id, professional_id, user_id, or created_at fields.'});
     }
     // --- End Validation ---
-
+    
     // First, check if the recommendation exists and belongs to the professional (even if deleted, to allow reactivation)
     const existingRec = Recommendation.findByIdIncludeDeleted(recommendationId);
     if (!existingRec) {
@@ -121,7 +121,7 @@ async function updateRecommendation(req, res) {
       // This case should be rare now due to the checks above, but kept for safety.
       return res.status(404).json({ message: 'Recommendation not found or does not belong to you.' });
     }
-
+    
     res.status(200).json(updatedRecommendation);
   } catch (error) {
     console.error('Update Recommendation Error:', error);
@@ -153,7 +153,7 @@ async function deleteRecommendation(req, res) {
     }
 
     const softDeletedRecommendation = Recommendation.softDelete(recommendationId, professional_id);
-
+    
     // res.status(204).send(); // 204 No Content is common for DELETE
     res.status(200).json({ message: 'Recommendation successfully deleted (soft delete).', recommendation: softDeletedRecommendation });
 

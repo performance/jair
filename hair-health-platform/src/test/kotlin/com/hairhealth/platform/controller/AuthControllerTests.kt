@@ -37,7 +37,7 @@ class AuthControllerTests {
     private lateinit var authService: AuthService
 
     // Mock JwtService if needed for creating mock UserPrincipal in SecurityContext
-    @MockBean
+    @MockBean 
     private lateinit var jwtService: JwtService
 
 
@@ -57,7 +57,7 @@ class AuthControllerTests {
             .expectBody(AuthResponse::class.java)
             .isEqualTo(authResponse)
     }
-
+    
     @Test
     fun `testRegister_InvalidEmail_ReturnsBadRequest`() {
         // Assuming RegisterRequest has validation annotations for email, or service throws specific error
@@ -90,7 +90,7 @@ class AuthControllerTests {
             .expectBody(AuthResponse::class.java)
             .isEqualTo(authResponse)
     }
-
+    
     @Test
     fun `testLogin_InvalidCredentials_ReturnsUnauthorizedOrBadRequest`() {
         val authRequest = AuthRequest("test@example.com", "wrongpassword")
@@ -113,7 +113,7 @@ class AuthControllerTests {
 
         // Mock the service call that getCurrentUser would make
         coEvery { authService.getCurrentUser(userId) } returns userResponse
-
+        
         // Setup mock UserPrincipal for the test request
         val mockPrincipal = UserPrincipal(userId, userEmail, userName, listOf("USER"))
 
@@ -125,16 +125,16 @@ class AuthControllerTests {
             .expectBody(UserResponse::class.java)
             .isEqualTo(userResponse)
     }
-
+    
     // Placeholder for RefreshToken test if endpoint exists
     // @Test
     // fun `testRefreshToken_Valid_ReturnsNewTokens`() {
     //     val refreshTokenRequest = mapOf("refreshToken" to "validRefreshToken") // Assuming simple map request
     //     val userResponse = UserResponse(UUID.randomUUID(), "test@example.com", "testuser", true)
     //     val authResponse = AuthResponse("newAccessToken", "newRefreshToken", userResponse)
-    //
+    // 
     //     coEvery { authService.refreshToken("validRefreshToken") } returns authResponse
-    //
+    // 
     //     webTestClient.post().uri("/api/v1/auth/refresh-token")
     //         .contentType(MediaType.APPLICATION_JSON)
     //         .body(BodyInserters.fromValue(refreshTokenRequest))

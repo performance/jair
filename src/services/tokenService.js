@@ -11,7 +11,7 @@ function generateAccessToken(user, role = 'user') { // Added role, default to 'u
   const payload = {
     id: user.id,
     email: user.email, // Keep email for easier debugging if needed
-    role: role,
+    role: role, 
   };
   return jwt.sign(payload, ACCESS_TOKEN_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRY });
 }
@@ -49,6 +49,6 @@ module.exports = {
   verifyAccessToken,
   verifyRefreshToken,
   // Exporting for potential use in authMiddleware or if needed directly
-  ACCESS_TOKEN_SECRET,
+  ACCESS_TOKEN_SECRET, 
   REFRESH_TOKEN_SECRET
 };

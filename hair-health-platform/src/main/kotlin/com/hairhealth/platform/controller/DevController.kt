@@ -126,7 +126,7 @@ class DevController(
             )
             interventionService.logInterventionApplication(
                 userId = userUuid,
-                interventionId = minoxidilResponse.id,
+                interventionId = minoxidilResponse.id, 
                 request = morningAppRequest
             )
             

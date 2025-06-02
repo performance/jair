@@ -19,7 +19,7 @@ class AuditLogService(
     private val auditLogRepository: AuditLogRepository,
     // Using default jacksonObjectMapper from com.fasterxml.jackson.module.kotlin
     // Or inject a pre-configured ObjectMapper bean if available/customized
-    private val objectMapper: ObjectMapper = jacksonObjectMapper()
+    private val objectMapper: ObjectMapper = jacksonObjectMapper() 
 ) {
     private val logger = LoggerFactory.getLogger(AuditLogService::class.java)
 

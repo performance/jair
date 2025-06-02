@@ -29,7 +29,7 @@ class UserRecommendationControllerTests {
 
     @MockBean
     private lateinit var recommendationService: RecommendationService
-
+    
     @MockBean
     private lateinit var jwtService: JwtService // For SecurityConfig context
 
@@ -71,7 +71,7 @@ class UserRecommendationControllerTests {
         val batchRequest = BatchRecommendationActionRequest(listOf(actionRequest1))
 
         val updatedRecResponse1 = mockRecResponse1.copy(userAction = "ACCEPTED", userActionAt = Instant.now())
-
+        
         // Mock the service to return a list of updated responses
         coEvery { recommendationService.processBatchUserActions(userId, batchRequest) } returns listOf(updatedRecResponse1)
 
@@ -89,7 +89,7 @@ class UserRecommendationControllerTests {
                 assert(responses[0].id == recommendationId1)
             }
     }
-
+    
     @Test
     fun `testBatchAction_PartialFailure_OrServiceThrows_ReturnsError`() {
         // This test depends on how processBatchUserActions handles errors.

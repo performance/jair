@@ -28,7 +28,7 @@ class ProfessionalRecommendationController(
         @AuthenticationPrincipal principal: UserPrincipal,
         @Valid @RequestBody request: CreateRecommendationRequest
     ): ResponseEntity<Any> {
-        val professionalId = principal.userId
+        val professionalId = principal.userId 
         return try {
             val recommendation = recommendationService.createRecommendation(professionalId, request)
             ResponseEntity.status(HttpStatus.CREATED).body(recommendation)
@@ -91,7 +91,7 @@ class ProfessionalRecommendationController(
         val professionalId = principal.userId
         val success = recommendationService.deleteRecommendation(professionalId, recommendationId)
         return if (success) {
-            ResponseEntity.noContent().build()
+            ResponseEntity.noContent().build() 
         } else {
             ResponseEntity.status(HttpStatus.NOT_FOUND).body(mapOf("message" to "Recommendation not found or you do not have permission to delete it."))
         }

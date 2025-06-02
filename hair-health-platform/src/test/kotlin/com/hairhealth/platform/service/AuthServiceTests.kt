@@ -62,7 +62,7 @@ class AuthServiceTests {
         assertNotNull(response)
         assertEquals("accessToken", response.accessToken)
         assertEquals(testUser.id, response.user.id)
-
+        
         // Verify audit log was called for success (example)
         // coVerify { auditLogService.logEvent(actorId = testUser.id.toString(), action = "USER_REGISTRATION_SUCCESS", status = AuditEventStatus.SUCCESS, any(), any(), any(), any(), any() ) }
     }
@@ -109,7 +109,7 @@ class AuthServiceTests {
             authService.login("test@example.com", "wrongpassword")
         }
     }
-
+    
     @Test
     fun `testLoginUser_InactiveUser_ThrowsIllegalArgumentException`() = runBlocking {
         val inactiveUser = testUser.copy(isActive = false)
@@ -147,12 +147,12 @@ class AuthServiceTests {
             authService.refreshToken("invalidToken")
         }
     }
-
+    
     @Test
     fun `testRefreshToken_ExpiredToken_ThrowsIllegalArgumentException`() = runBlocking {
         every { jwtService.validateToken("expiredToken") } returns true // Valid structure
         every { jwtService.isTokenExpired("expiredToken") } returns true // But expired
-
+        
         assertThrows<IllegalArgumentException> {
             authService.refreshToken("expiredToken")
         }
@@ -163,7 +163,7 @@ class AuthServiceTests {
         every { jwtService.validateToken("accessTokenAsRefreshToken") } returns true
         every { jwtService.isTokenExpired("accessTokenAsRefreshToken") } returns false
         every { jwtService.extractTokenType("accessTokenAsRefreshToken") } returns "access" // Wrong type
-
+        
         assertThrows<IllegalArgumentException> {
             authService.refreshToken("accessTokenAsRefreshToken")
         }
@@ -177,7 +177,7 @@ class AuthServiceTests {
         every { jwtService.extractTokenType("validTokenUserNotFound") } returns "refresh"
         every { jwtService.extractUserIdFromToken("validTokenUserNotFound") } returns nonExistentUserId
         coEvery { userRepository.findById(nonExistentUserId) } returns null // User not found
-
+        
         assertThrows<IllegalArgumentException> {
             authService.refreshToken("validTokenUserNotFound")
         }

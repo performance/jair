@@ -32,7 +32,7 @@ class InterventionControllerTests {
 
     @MockBean
     private lateinit var interventionService: InterventionService
-
+    
     @MockBean
     private lateinit var jwtService: JwtService // For SecurityConfig context
 
@@ -75,7 +75,7 @@ class InterventionControllerTests {
             .expectStatus().isCreated
             .expectBody(InterventionResponse::class.java).isEqualTo(mockInterventionResponse)
     }
-
+    
     @Test
     fun `testCreateIntervention_InvalidTypeInRequest_ReturnsBadRequest`() {
         val badRequest = createInterventionRequest.copy(type="INVALID_TYPE_FOO")
@@ -139,7 +139,7 @@ class InterventionControllerTests {
             .expectStatus().isCreated
             .expectBody(InterventionApplicationResponse::class.java).isEqualTo(mockApplicationResponse)
     }
-
+    
     @Test
     fun `testLogApplication_InterventionNotFound_ReturnsNotFound`() {
         coEvery { interventionService.logInterventionApplication(userId, interventionId, logApplicationRequest) } throws InterventionNotFoundException("Intervention not found")
@@ -165,7 +165,7 @@ class InterventionControllerTests {
             .expectStatus().isOk
             .expectBodyList(InterventionApplicationResponse::class.java).hasSize(1)
     }
-
+    
     @Test
     fun `testGetApplications_InterventionNotFound_ReturnsNotFound`() {
         coEvery { interventionService.getApplicationsForIntervention(userId, interventionId, 50, 0) } throws InterventionNotFoundException("Intervention not found")

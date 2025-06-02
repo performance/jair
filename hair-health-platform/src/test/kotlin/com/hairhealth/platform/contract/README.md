@@ -43,7 +43,7 @@ class UserRecommendationContractTests {
     fun getValidUserToken(): String {
         // Implement logic to call login endpoint and get a token
         // This is simplified; actual implementation would involve a login call
-        return "dummy-jwt-token-for-contract-test"
+        return "dummy-jwt-token-for-contract-test" 
     }
 
     @Test

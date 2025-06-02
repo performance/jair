@@ -68,7 +68,7 @@ class JdbcRecommendationRepository(private val jdbcTemplate: JdbcTemplate) : Rec
                 user_action = EXCLUDED.user_action,
                 user_action_notes = EXCLUDED.user_action_notes,
                 user_action_at = EXCLUDED.user_action_at
-            RETURNING *;
+            RETURNING *; 
         """.trimIndent()
 
         val params = MapSqlParameterSource()
@@ -86,7 +86,7 @@ class JdbcRecommendationRepository(private val jdbcTemplate: JdbcTemplate) : Rec
             .addValue("user_action", recommendation.userAction?.name)
             .addValue("user_action_notes", recommendation.userActionNotes)
             .addValue("user_action_at", recommendation.userActionAt?.let { Timestamp.from(it) })
-
+        
         // For databases that don't support ON CONFLICT ... RETURNING, you would do:
         // 1. val existing = findById(recommendation.id)
         // 2. if (existing == null) { /* INSERT SQL */ } else { /* UPDATE SQL */ }
@@ -99,7 +99,7 @@ class JdbcRecommendationRepository(private val jdbcTemplate: JdbcTemplate) : Rec
         // If RETURNING * is not available or doesn't map well, just execute update and return the input `recommendation` object
         // as it would reflect the intended state.
         // namedParameterJdbcTemplate.update(sql, params)
-        // recommendation
+        // recommendation 
     }
 
 
@@ -126,7 +126,7 @@ class JdbcRecommendationRepository(private val jdbcTemplate: JdbcTemplate) : Rec
             .addValue("user_id", userId)
         namedParameterJdbcTemplate.query(sql, params, recommendationRowMapper)
     }
-
+    
     override suspend fun findByProfessionalIdAndId(professionalId: UUID, id: UUID): Recommendation? = withContext(Dispatchers.IO) {
         val sql = "SELECT * FROM recommendations WHERE professional_id = :professional_id AND id = :id"
         val params = MapSqlParameterSource()

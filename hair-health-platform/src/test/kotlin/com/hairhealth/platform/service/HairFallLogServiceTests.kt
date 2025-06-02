@@ -59,10 +59,10 @@ class HairFallLogServiceTests {
         // Assuming the service's createHairFallLog was refactored to take CreateHairFallLogRequest
         // and that toDomain works as expected.
         // The service then calls repository.create() with a domain object.
-
+        
         // We mock the repository's `create` method, which is called by the service's `createHairFallLog`
         // after it converts the DTO to a domain object.
-        coEvery { hairFallLogRepository.create(any()) } answers {
+        coEvery { hairFallLogRepository.create(any()) } answers { 
             // The 'any()' here would be the domain object created by request.toDomain(userId).copy(...)
             // We return a domain object that would be the result of persistence.
             // For this test, we can return the `mockHairFallLog` or the argument itself if it's correctly formed.
@@ -76,7 +76,7 @@ class HairFallLogServiceTests {
         assertEquals(createLogRequest.count, resultResponse.count)
         assertEquals(createLogRequest.category, resultResponse.category)
     }
-
+    
     @Test
     fun `testCreateHairFallLog_InvalidCategory_ThrowsIllegalArgumentException`() = runBlocking {
         val badRequest = createLogRequest.copy(category = "INVALID_CATEGORY")
@@ -110,15 +110,15 @@ class HairFallLogServiceTests {
         assertFalse(results.isEmpty())
         assertEquals(1, results.size)
     }
-
+    
     @Test
     fun `testGetHairFallLogsByDateRange_Success`() = runBlocking {
         val startDate = LocalDate.now().minusDays(7)
         val endDate = LocalDate.now()
         coEvery { hairFallLogRepository.findByUserIdAndDateRange(userId, startDate, endDate) } returns listOf(mockHairFallLog)
-
+        
         val results = hairFallLogService.getHairFallLogsByDateRange(userId, startDate, endDate)
-
+        
         assertFalse(results.isEmpty())
         assertEquals(1, results.size)
         assertEquals(mockHairFallLog.id, results[0].id)
