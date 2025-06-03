@@ -77,7 +77,7 @@ class ProfessionalRecommendationControllerTests {
             .expectStatus().isCreated
             .expectBody(RecommendationResponse::class.java).isEqualTo(mockRecResponse)
     }
-    
+
     @Test
     fun `testCreateRecommendation_PatientNotFound_ReturnsNotFound`() {
         coEvery { recommendationService.createRecommendation(professionalId, createRecRequest) } throws UserNotFoundException("Patient not found")
@@ -90,7 +90,7 @@ class ProfessionalRecommendationControllerTests {
             .exchange()
             .expectStatus().isNotFound
     }
-    
+
     @Test
     fun `testCreateRecommendation_InvalidTypeInRequest_ReturnsBadRequest`() {
         val invalidRequest = createRecRequest.copy(type="INVALID_TYPE_FOO")
@@ -119,7 +119,7 @@ class ProfessionalRecommendationControllerTests {
             .expectStatus().isOk
             .expectBodyList(RecommendationResponse::class.java).hasSize(1).contains(mockRecResponse)
     }
-    
+
     @Test
     fun `testGetRecommendations_ByProfessionalAndPatient_ReturnsOk`() {
         coEvery { recommendationService.getRecommendationsByProfessional(professionalId, patientUserId) } returns listOf(mockRecResponse)
@@ -157,7 +157,7 @@ class ProfessionalRecommendationControllerTests {
             .exchange()
             .expectStatus().isNotFound
     }
-    
+
     @Test
     fun `testUpdateRecommendation_ValidRequest_ReturnsOk`() {
         val updateRequestMap = mapOf("title" to "Updated Title", "status" to "SUPERSEDED")
@@ -165,7 +165,7 @@ class ProfessionalRecommendationControllerTests {
         val updatedResponse = mockRecResponse.copy(title = "Updated Title", status = "SUPERSEDED")
 
         coEvery { recommendationService.updateRecommendation(eq(professionalId), eq(recommendationId), any()) } returns updatedResponse
-        
+
         webTestClient
             .mutateWith(mockUser().principal(mockProfessionalPrincipal))
             .put().uri("/api/v1/professionals/me/recommendations/${recommendationId}")
@@ -187,7 +187,7 @@ class ProfessionalRecommendationControllerTests {
             .exchange()
             .expectStatus().isNoContent // Or .isOk() if service returns the deleted object
     }
-    
+
     @Test
     fun `testDeleteRecommendation_NotFound_ReturnsNotFound`() {
         coEvery { recommendationService.deleteRecommendation(professionalId, recommendationId) } returns false // Service indicates not found or not owned

@@ -2,7 +2,7 @@ package com.hairhealth.platform.service
 
 import com.hairhealth.platform.domain.*
 import com.hairhealth.platform.repository.RecommendationRepository
-import com.hairhealth.platform.repository.UserRepository 
+import com.hairhealth.platform.repository.UserRepository
 import com.hairhealth.platform.service.dto.*
 import com.hairhealth.platform.service.dto.toDomain
 import com.hairhealth.platform.service.dto.toResponse
@@ -72,7 +72,7 @@ class RecommendationService(
         if (existingRecommendation.status == RecommendationStatus.DELETED && (request.status == null || RecommendationStatus.valueOf(request.status.uppercase()) == RecommendationStatus.DELETED)) {
             throw RecommendationUpdateException("Cannot update a DELETED recommendation unless reactivating it.")
         }
-        
+
         val updatedRecommendation = existingRecommendation.copy(
             title = request.title ?: existingRecommendation.title,
             description = request.description ?: existingRecommendation.description,
@@ -125,7 +125,7 @@ class RecommendationService(
             actorType = ActorType.PROFESSIONAL,
             action = "DELETE_RECOMMENDATION_SUCCESS", // Soft delete
             targetEntityType = "RECOMMENDATION",
-            targetEntityId = recommendation.id.toString(), 
+            targetEntityId = recommendation.id.toString(),
             status = AuditEventStatus.SUCCESS,
             details = mapOf(
                 "professionalId" to professionalId.toString(),

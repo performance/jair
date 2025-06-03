@@ -24,7 +24,7 @@ function authenticateProfessionalToken(req, res, next) {
   if (!professional) {
     return res.status(401).json({ message: 'Unauthorized: Professional not found for token' });
   }
-  
+
   req.professional = professional.toJSON(); // Attach professional to request, excluding password
   next();
 }

@@ -7,7 +7,7 @@ import com.hairhealth.platform.service.dto.CreateHairFallLogRequest // Import ne
 import com.hairhealth.platform.service.dto.HairFallLogResponse // Import new DTO
 import com.hairhealth.platform.service.dto.toResponse // Import mapper
 // It seems toDomain is not directly used here if service expects raw params for create
-// import com.hairhealth.platform.service.dto.toDomain 
+// import com.hairhealth.platform.service.dto.toDomain
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity

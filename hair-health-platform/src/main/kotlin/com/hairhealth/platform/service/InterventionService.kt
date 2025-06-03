@@ -27,8 +27,8 @@ class InterventionService(
     suspend fun createIntervention(userId: UUID, request: CreateInterventionRequest): InterventionResponse = withContext(Dispatchers.IO) {
         val intervention = request.toDomain(userId).copy(
             // Ensure new instances get fresh timestamps and ID, if not handled by toDomain or default constructor
-            id = UUID.randomUUID(), 
-            createdAt = Instant.now(), 
+            id = UUID.randomUUID(),
+            createdAt = Instant.now(),
             updatedAt = Instant.now()
         )
         interventionRepository.create(intervention).toResponse()
@@ -41,7 +41,7 @@ class InterventionService(
     suspend fun getInterventionsForUser(userId: UUID, includeInactive: Boolean): List<InterventionResponse> = withContext(Dispatchers.IO) {
         interventionRepository.findByUserId(userId, includeInactive).map { it.toResponse() }
     }
-    
+
     // Keeping existing getActiveInterventionsByUserId for potential internal use or if other parts of app use it.
     suspend fun getActiveInterventionsByUserId(userId: UUID): List<Intervention> {
         return interventionRepository.findActiveByUserId(userId)
@@ -60,7 +60,7 @@ class InterventionService(
     suspend fun logInterventionApplication(userId: UUID, interventionId: UUID, request: LogApplicationRequest): InterventionApplicationResponse = withContext(Dispatchers.IO) {
         val intervention = interventionRepository.findByIdAndUserId(interventionId, userId)
             ?: throw InterventionNotFoundException("Active intervention not found for user or ID: $interventionId")
-        
+
         if (!intervention.isActive) {
              throw InterventionInteractionException("Cannot log application for an inactive intervention.")
         }
@@ -76,7 +76,7 @@ class InterventionService(
         // Verify user owns the intervention first
         interventionRepository.findByIdAndUserId(interventionId, userId)
             ?: throw InterventionNotFoundException("Intervention not found for user or ID: $interventionId")
-        
+
         interventionApplicationRepository.findByInterventionId(interventionId, limit, offset).map { it.toResponse() }
     }
 

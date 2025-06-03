@@ -87,7 +87,7 @@ async function refreshToken(req, res) {
 
     const decoded = verifyRefreshToken(providedRefreshToken);
     // Ensure the refresh token was intended for a professional
-    if (!decoded || decoded.role !== 'professional') { 
+    if (!decoded || decoded.role !== 'professional') {
       return res.status(401).json({ message: 'Invalid or expired refresh token for professional' });
     }
 
@@ -133,7 +133,7 @@ async function updateMe(req, res) {
     if (profile_name === undefined && professional_title === undefined) {
       return res.status(400).json({ message: 'No updateable fields provided (e.g., profile_name, professional_title)' });
     }
-    
+
     const professionalInstance = Professional.findById(professionalId);
     if (!professionalInstance) {
         return res.status(404).json({ message: 'Professional not found' });

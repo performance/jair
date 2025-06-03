@@ -18,8 +18,8 @@ class JdbcAuditLogRepository(
     override suspend fun save(auditLog: AuditLog): AuditLog = withContext(Dispatchers.IO) {
         val sql = """
             INSERT INTO audit_logs (
-                id, "timestamp", actor_id, actor_type, action, 
-                target_entity_type, target_entity_id, ip_address, device_info, 
+                id, "timestamp", actor_id, actor_type, action,
+                target_entity_type, target_entity_id, ip_address, device_info,
                 status, details
             ) VALUES (
                 :id, :timestamp, :actor_id, :actor_type, :action,
@@ -40,13 +40,13 @@ class JdbcAuditLogRepository(
             .addValue("device_info", auditLog.deviceInfo, Types.VARCHAR)
             .addValue("status", auditLog.status.name)
             .addValue("details", auditLog.details, Types.VARCHAR)
-            
+
         jdbcTemplate.update(sql, params)
         // Retrieving the saved object isn't strictly necessary for audit logging if not modifying it.
         // If RETURNING * was used (PostgreSQL specific), a row mapper would be needed here.
-        auditLog 
+        auditLog
     }
-    
+
     // RowMapper would be needed if we had find methods, but for save-only it's not essential
     // private val auditLogRowMapper = RowMapper<AuditLog> { rs, _ ->
     //     AuditLog(

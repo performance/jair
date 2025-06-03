@@ -52,7 +52,7 @@ class Recommendation {
   static findById(id) {
     return recommendations.find(rec => rec.id === id && rec.status !== 'DELETED');
   }
-  
+
   static findByIdIncludeDeleted(id) { // Helper for updates/delete if needed to find a DELETED one
     return recommendations.find(rec => rec.id === id);
   }
@@ -89,7 +89,7 @@ class Recommendation {
     }
 
     const recommendation = recommendations[recIndex];
-    
+
     // Prevent accidental update of DELETED items unless status is explicitly being changed
     if (recommendation.status === 'DELETED' && (!updates.status || updates.status === 'DELETED')) {
         // Or throw an error: throw new Error("Cannot update a DELETED recommendation unless reactivating it.");

@@ -160,7 +160,7 @@ class AuthService(
         // Log successful login
         auditLogService.logEvent(
             actorId = user.id.toString(),
-            actorType = actorTypeForAudit, 
+            actorType = actorTypeForAudit,
             action = if (actorTypeForAudit == ActorType.PROFESSIONAL) "PROFESSIONAL_LOGIN_SUCCESS" else "USER_LOGIN_SUCCESS",
             targetEntityType = "USER_ACCOUNT",
             targetEntityId = user.id.toString(),

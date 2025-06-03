@@ -64,22 +64,22 @@ class HairFallLogControllerTests {
         // correctly handles the DTO and calls the service.
         // The service (even the old one) takes individual params.
         // The controller test should verify the controller correctly unpacks the DTO for the service.
-        
+
         // Mocking the service's createHairFallLog method (the one that takes individual params)
         // The controller's responsibility is to call this correctly.
         // The actual response from service is domain object, controller maps it to DTO.
-        coEvery { 
+        coEvery {
             hairFallLogService.createHairFallLog(
-                userId = eq(userId), 
+                userId = eq(userId),
                 date = eq(createLogRequestDTO.date),
                 count = eq(createLogRequestDTO.count),
                 category = eq(com.hairhealth.platform.domain.HairFallCategory.SHOWER), // Service expects Enum
                 description = eq(createLogRequestDTO.description),
                 photoMetadataId = eq(createLogRequestDTO.photoMetadataId)
-            ) 
+            )
         } returns com.hairhealth.platform.domain.HairFallLog( // service returns domain object
             id = logId, userId = userId, date = createLogRequestDTO.date, count = createLogRequestDTO.count,
-            category = com.hairhealth.platform.domain.HairFallCategory.SHOWER, 
+            category = com.hairhealth.platform.domain.HairFallCategory.SHOWER,
             description = createLogRequestDTO.description, photoMetadataId = null,
             createdAt = mockLogResponseDTO.createdAt, updatedAt = mockLogResponseDTO.updatedAt
         )
@@ -128,8 +128,8 @@ class HairFallLogControllerTests {
         // Service's getHairFallLogById takes only ID, controller must verify ownership
         coEvery { hairFallLogService.getHairFallLogById(logId) } returns com.hairhealth.platform.domain.HairFallLog(
             id = logId, userId = userId, // CRITICAL: ensure this userId matches principal for test pass
-            date = LocalDate.now(), count = 50, category = com.hairhealth.platform.domain.HairFallCategory.SHOWER, 
-            description = "test", photoMetadataId = null, 
+            date = LocalDate.now(), count = 50, category = com.hairhealth.platform.domain.HairFallCategory.SHOWER,
+            description = "test", photoMetadataId = null,
             createdAt = mockLogResponseDTO.createdAt, updatedAt = mockLogResponseDTO.updatedAt
         )
 
@@ -151,18 +151,18 @@ class HairFallLogControllerTests {
         // Service returns log, but it belongs to another user
         coEvery { hairFallLogService.getHairFallLogById(logId) } returns com.hairhealth.platform.domain.HairFallLog(
             id = logId, userId = otherUserId, // Belongs to otherUser
-            date = LocalDate.now(), count = 50, category = com.hairhealth.platform.domain.HairFallCategory.SHOWER, 
-            description = "test", photoMetadataId = null, 
+            date = LocalDate.now(), count = 50, category = com.hairhealth.platform.domain.HairFallCategory.SHOWER,
+            description = "test", photoMetadataId = null,
             createdAt = mockLogResponseDTO.createdAt, updatedAt = mockLogResponseDTO.updatedAt
         )
-        
+
         webTestClient
             .mutateWith(mockUser().principal(mockUserPrincipal)) // Authenticated as 'userId'
             .get().uri("/api/v1/me/hair-fall-logs/${logId}")
             .exchange()
             .expectStatus().isForbidden // Due to controller's ownership check
     }
-    
+
     @Test
     fun `testGetHairFallLogById_NotFound_ReturnsNotFound`() {
         coEvery { hairFallLogService.getHairFallLogById(logId) } returns null // Log not found by service
@@ -173,7 +173,7 @@ class HairFallLogControllerTests {
             .exchange()
             .expectStatus().isNotFound
     }
-    
+
     @Test
     fun `testGetHairFallLogsByDateRange_ReturnsOk`() {
         val startDate = LocalDate.now().minusDays(7)

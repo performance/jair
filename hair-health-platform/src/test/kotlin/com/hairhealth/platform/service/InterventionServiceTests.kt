@@ -92,7 +92,7 @@ class InterventionServiceTests {
         assertEquals(interventionId, result.id)
         assertEquals(createInterventionRequest.productName, result.productName)
     }
-    
+
     @Test
     fun `testCreateIntervention_InvalidType_ThrowsIllegalArgumentException`() = runBlocking {
         val badRequest = createInterventionRequest.copy(type = "INVALID_TYPE_FOO")
@@ -124,7 +124,7 @@ class InterventionServiceTests {
         assertFalse(results.isEmpty())
         assertEquals(1, results.size)
     }
-    
+
     @Test
     fun `testGetInterventionsForUser_IncludeInactive_Success`() = runBlocking {
         val inactiveIntervention = mockIntervention.copy(isActive = false)
@@ -154,7 +154,7 @@ class InterventionServiceTests {
             interventionService.logInterventionApplication(userId, interventionId, logApplicationRequest)
         }
     }
-    
+
     @Test
     fun `testLogInterventionApplication_InterventionNotActive_ThrowsInterventionInteractionException`() = runBlocking {
         val inactiveIntervention = mockIntervention.copy(isActive = false)

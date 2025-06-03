@@ -78,7 +78,7 @@ class RecommendationServiceTests {
             recommendationService.createRecommendation(professionalId, createRecRequest)
         }
     }
-    
+
     @Test
     fun `testCreateRecommendation_InvalidTypeInRequest_ThrowsIllegalArgumentException`() = runBlocking {
          val badRequest = createRecRequest.copy(type = "INVALID_TYPE_FOO")
@@ -97,14 +97,14 @@ class RecommendationServiceTests {
         assertNotNull(result)
         assertEquals(mockRecommendation.id, result!!.id)
     }
-    
+
     @Test
     fun `testGetRecommendationById_NotOwnedOrNonExistent_ReturnsNull`() = runBlocking {
         coEvery { recommendationRepository.findByProfessionalIdAndId(professionalId, recommendationId) } returns null
         val result = recommendationService.getRecommendationById(professionalId, recommendationId)
         assertNull(result)
     }
-    
+
     @Test
     fun `testGetRecommendationById_IsDeleted_ReturnsNull`() = runBlocking {
         val deletedRecommendation = mockRecommendation.copy(status = RecommendationStatus.DELETED)
@@ -135,12 +135,12 @@ class RecommendationServiceTests {
     fun `testUpdateRecommendation_Success`() = runBlocking {
         val updateRequest = UpdateRecommendationRequest(title = "Updated Title", status = "SUPERSEDED")
         val updatedDomainRec = mockRecommendation.copy(title = "Updated Title", status = RecommendationStatus.SUPERSEDED, updatedAt = Instant.now())
-        
+
         coEvery { recommendationRepository.findByProfessionalIdAndId(professionalId, recommendationId) } returns mockRecommendation
         coEvery { recommendationRepository.save(any()) } returns updatedDomainRec
 
         val result = recommendationService.updateRecommendation(professionalId, recommendationId, updateRequest)
-        
+
         assertNotNull(result)
         assertEquals("Updated Title", result!!.title)
         assertEquals("SUPERSEDED", result.status)
@@ -150,7 +150,7 @@ class RecommendationServiceTests {
     fun `testUpdateRecommendation_NotFoundOrNotOwned_ReturnsNull`() = runBlocking {
         val updateRequest = UpdateRecommendationRequest(title = "Updated Title")
         coEvery { recommendationRepository.findByProfessionalIdAndId(professionalId, recommendationId) } returns null
-        
+
         val result = recommendationService.updateRecommendation(professionalId, recommendationId, updateRequest)
         assertNull(result)
     }
@@ -164,18 +164,18 @@ class RecommendationServiceTests {
              recommendationService.updateRecommendation(professionalId, recommendationId, updateRequest)
         }
     }
-    
+
     @Test
     fun `testUpdateRecommendation_OnDeletedRecommendation_ThrowsRecommendationUpdateException`() = runBlocking {
         val deletedRec = mockRecommendation.copy(status = RecommendationStatus.DELETED)
         val updateRequest = UpdateRecommendationRequest(title = "New Title for Deleted")
         coEvery { recommendationRepository.findByProfessionalIdAndId(professionalId, recommendationId) } returns deletedRec
-        
+
         assertThrows<RecommendationUpdateException> {
             recommendationService.updateRecommendation(professionalId, recommendationId, updateRequest)
         }
     }
-    
+
     @Test
     fun `testUpdateRecommendation_ReactivatingDeletedRecommendation_Success`() = runBlocking {
         val deletedRec = mockRecommendation.copy(status = RecommendationStatus.DELETED)
@@ -184,7 +184,7 @@ class RecommendationServiceTests {
 
         coEvery { recommendationRepository.findByProfessionalIdAndId(professionalId, recommendationId) } returns deletedRec
         coEvery { recommendationRepository.save(any()) } returns reactivatedDomainRec
-        
+
         val result = recommendationService.updateRecommendation(professionalId, recommendationId, reactivateRequest)
         assertNotNull(result)
         assertEquals("ACTIVE", result!!.status)
@@ -199,7 +199,7 @@ class RecommendationServiceTests {
         val success = recommendationService.deleteRecommendation(professionalId, recommendationId)
         assertTrue(success)
     }
-    
+
     @Test
     fun `testDeleteRecommendation_AlreadyDeleted_ReturnsTrue`() = runBlocking {
         val alreadyDeletedRec = mockRecommendation.copy(status = RecommendationStatus.DELETED)
@@ -251,7 +251,7 @@ class RecommendationServiceTests {
         assertEquals("DECLINED", result.userAction)
         assertTrue(result.userActionNotes?.contains("Not interested") ?: false)
     }
-    
+
     @Test
     fun `testProcessUserAction_AcceptWithModifications_Success`() = runBlocking {
         val modifications = mapOf("dosage" to "0.5ml")
@@ -287,7 +287,7 @@ class RecommendationServiceTests {
             recommendationService.processUserAction(otherUserId, actionRequest) // Called with otherUserId
         }
     }
-    
+
     @Test
     fun `testProcessUserAction_RecommendationNotActive_ThrowsRecommendationActionException`() = runBlocking {
         val inactiveRec = mockRecommendation.copy(status = RecommendationStatus.SUPERSEDED)
@@ -298,7 +298,7 @@ class RecommendationServiceTests {
             recommendationService.processUserAction(patientUserId, actionRequest)
         }
     }
-    
+
     @Test
     fun `testProcessUserAction_InvalidActionString_ThrowsIllegalArgumentException`() = runBlocking {
         val actionRequest = RecommendationActionRequest(recommendationId, "INVALID_ACTION_STRING")

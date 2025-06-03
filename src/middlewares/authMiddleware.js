@@ -21,9 +21,9 @@ function authenticateToken(req, res, next) {
       // This case might happen if the user was deleted after the token was issued
       return res.status(401).json({ message: 'Unauthorized: User not found for token' });
   }
-  
+
   // Exclude password_hash from the user object attached to req
-  req.user = user.toJSON(); 
+  req.user = user.toJSON();
   next();
 }
 

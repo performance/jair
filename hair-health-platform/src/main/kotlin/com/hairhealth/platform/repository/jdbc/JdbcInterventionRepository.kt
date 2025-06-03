@@ -245,7 +245,7 @@ class JdbcInterventionApplicationRepository(
             SELECT id, intervention_id, user_id, timestamp, notes, created_at
             FROM intervention_applications
             WHERE user_id = :userId 
-            AND timestamp >= :startDate AND timestamp < :endDate 
+            AND timestamp >= :startDate AND timestamp < :endDate
             ORDER BY timestamp DESC
         """.trimIndent() // Adjusted query for Instant range
 

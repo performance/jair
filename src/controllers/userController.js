@@ -8,7 +8,7 @@ async function getMe(req, res) {
     // This should ideally not happen if authenticateToken is working correctly
     return res.status(401).json({ message: 'Unauthorized: User not available in request' });
   }
-  
+
   // Retrieve the most up-to-date user information, though req.user might be sufficient
   // depending on how stale you allow req.user to be.
   // For this implementation, req.user (which is already a JSON object) is fine.
@@ -25,7 +25,7 @@ async function updateMe(req, res) {
       // Or handle other updatable fields if any. If only profile_name is updatable and it's not provided:
       return res.status(400).json({ message: 'No updateable fields provided (e.g., profile_name)' });
     }
-    
+
     // We need the full User object to call its methods
     const userInstance = User.findById(userId);
     if (!userInstance) {
